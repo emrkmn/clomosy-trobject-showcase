@@ -1,0 +1,285 @@
+var
+  AnaForm: TCLForm;
+  UstBaslikLbl, BilgiLbl, HavaDurumuLbl: TclProLabel;
+  PnlUst, PnlHavaDurumu: TclProPanel;
+  KonumAlBtn: TclProButton;
+  HaritaBrowser: TCLProWebBrowser;
+  GpsTimer: TClTimer;
+  GpsDenemeSayisi: Integer;
+  RestServis: TclRest;
+
+function NoktayaCevir(Deger: String): String;
+var
+  i: Integer;
+  Sonuc, Harf: String;
+{
+  Sonuc = '';
+  i = 1;
+  while (i <= Length(Deger))
+  {
+    Harf = Copy(Deger, i, 1);
+    if (Harf == ',')
+      Sonuc = Sonuc + '.'
+    else
+      Sonuc = Sonuc + Harf;
+    i = i + 1;
+  }
+  Result = Sonuc;
+}
+
+function WmoHavaDurumuMetni(Kod: Integer): String;
+{
+  if (Kod == 0) Result = '☀️ Açık / Güneşli';
+  else if ((Kod == 1) || (Kod == 2)) Result = '🌤️ Az / Parçalı Bulutlu';
+  else if (Kod == 3) Result = '☁️ Çok Bulutlu / Kapalı';
+  else if ((Kod == 45) || (Kod == 48)) Result = '🌫️ Sisli';
+  else if ((Kod >= 51) && (Kod <= 55)) Result = '🌧️ Çiseleyen Yağmur';
+  else if ((Kod >= 61) && (Kod <= 65)) Result = '🌧️ Yağmurlu';
+  else if ((Kod >= 71) && (Kod <= 77)) Result = '❄️ Kar Yağışlı';
+  else if ((Kod >= 80) && (Kod <= 82)) Result = '🌦️ Sağanak Yağış';
+  else if (Kod >= 95) Result = '⛈️ Gök Gürültülü Fırtına';
+  else Result = '🌡️ Güncel Durum';
+}
+
+function BeklemeEkraniHtml: String;
+var
+  Html: String;
+{
+  Html = '<!DOCTYPE html>' +
+         '<html><head><meta charset="utf-8" />' +
+         '<meta name="viewport" content="width=device-width, initial-scale=1.0" />' +
+         '<style>' +
+         '  body { margin:0; background-color:#0B0F19; color:#94A3B8; font-family:sans-serif; ' +
+         '         display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; text-align:center; padding:20px; box-sizing:border-box; }' +
+         '  .icon { font-size:48px; margin-bottom:16px; }' +
+         '  h3 { color:#F8FAFC; margin:0 0 8px 0; font-size:18px; }' +
+         '  p { font-size:13px; color:#64748B; margin:0; line-height:1.5; }' +
+         '</style></head><body>' +
+         '  <div class="icon">⛅</div>' +
+         '  <h3>TclRest ile Canlı Hava & GPS</h3>' +
+         '  <p>Anlık GPS konumunuzu ve REST API hava durumunu haritada görmek için yukarıdaki <b>"Konumu Al"</b> butonuna dokunun.</p>' +
+         '</body></html>';
+  Result = Html;
+}
+
+function OpenStreetMapHtml(Lat, Lng, HavaBilgisi: String): String;
+var
+  Html: String;
+{
+  Html = '<!DOCTYPE html>' +
+         '<html>' +
+         '<head>' +
+         '  <meta charset="utf-8" />' +
+         '  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />' +
+         '  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />' +
+         '  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>' +
+         '  <style>' +
+         '    body, html { margin:0; padding:0; height:100%; width:100%; background:#0B0F19; font-family:sans-serif; }' +
+         '    #map { width:100%; height:100%; }' +
+         '    #bilgi { position:absolute; bottom:14px; left:14px; right:14px; background:rgba(15,23,42,0.94); color:#FDE68A; padding:10px 14px; border-radius:10px; font-size:12px; text-align:center; z-index:1000; border:1px solid #D97706; box-shadow:0 4px 12px rgba(0,0,0,0.5); }' +
+         '  </style>' +
+         '</head>' +
+         '<body>' +
+         '  <div id="map"></div>' +
+         '  <div id="bilgi">📍 Konum: ' + Lat + ', ' + Lng + ' | ' + HavaBilgisi + '</div>' +
+         '  <script>' +
+         '    var map = L.map("map").setView([' + Lat + ', ' + Lng + '], 16);' +
+         '    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {' +
+         '      maxZoom: 19,' +
+         '      attribution: "© OpenStreetMap"' +
+         '    }).addTo(map);' +
+         '    var marker = L.marker([' + Lat + ', ' + Lng + ']).addTo(map)' +
+         '      .bindPopup("<b>📍 Buradasınız!</b><br>' + HavaBilgisi + '<br>Enlem: ' + Lat + '<br>Boylam: ' + Lng + '").openPopup();' +
+         '    L.circle([' + Lat + ', ' + Lng + '], 35, { color: "#D97706", fillColor: "#F59E0B", fillOpacity: 0.25 }).addTo(map);' +
+         '  </script>' +
+         '</body>' +
+         '</html>';
+  Result = Html;
+}
+
+void HavaDurumunuGetir(Lat, Lng: String);
+var
+  JsonCevap, SicaklikStr, RuzgarStr, HavaDurumMetin, HavaKoduStr: String;
+  HavaKodu: Integer;
+{
+  try
+    RestServis.BaseURL = 'https://api.open-meteo.com';
+    RestServis.Resource = 'v1/forecast?latitude=' + Lat + '&longitude=' + Lng + '&current=temperature_2m,weather_code,wind_speed_10m';
+    RestServis.Method = rmGET;
+
+    RestServis.Execute;
+    JsonCevap = RestServis.Response;
+
+    if (JsonCevap <> '')
+    {
+      SicaklikStr = Clomosy.ClParseJSON(JsonCevap, 'current.temperature_2m');
+      RuzgarStr   = Clomosy.ClParseJSON(JsonCevap, 'current.wind_speed_10m');
+      HavaKoduStr = Clomosy.ClParseJSON(JsonCevap, 'current.weather_code');
+
+      HavaKodu = StrToInt(HavaKoduStr);
+
+      HavaDurumMetin = WmoHavaDurumuMetni(HavaKodu) + '  ' + SicaklikStr + '°C  (Rüzgar: ' + RuzgarStr + ' km/s)';
+
+      PnlHavaDurumu.Visible = True;
+      HavaDurumuLbl.Text = HavaDurumMetin;
+
+      HaritaBrowser.LoadHTML(OpenStreetMapHtml(Lat, Lng, HavaDurumMetin));
+    }
+  except
+    HaritaBrowser.LoadHTML(OpenStreetMapHtml(Lat, Lng, 'Hava durumu REST servisine ulaşılamadı'));
+  }
+}
+
+void OnGpsTimerTick;
+var
+  KonumHam, TempLat, TempLng: String;
+{
+  KonumHam = Clomosy.LocationValue;
+
+  if (KonumHam <> '')
+  {
+    TempLat = clGetStringTo(KonumHam, '|');
+    TempLng = clGetStringAfter(KonumHam, '|');
+
+    TempLat = NoktayaCevir(TempLat);
+    TempLng = NoktayaCevir(TempLng);
+
+    if ((TempLat <> '') && (TempLng <> '') && (TempLat <> '0') && (TempLat <> '0.0') && (TempLat <> '0,0'))
+    {
+      GpsTimer.Enabled = False;
+
+      BilgiLbl.Text = '✓ GPS Konumu Tespit Edildi: ' + TempLat + ' , ' + TempLng;
+      BilgiLbl.clProSettings.FontColor = clAlphaColor.clHexToColor('#10B981');
+      BilgiLbl.SetclProSettings(BilgiLbl.clProSettings);
+
+      HavaDurumunuGetir(TempLat, TempLng);
+      Exit;
+    }
+  }
+
+  GpsDenemeSayisi = GpsDenemeSayisi + 1;
+  BilgiLbl.Text = 'GPS uydusu taranıyor... (' + IntToStr(GpsDenemeSayisi) + ' sn)';
+  BilgiLbl.SetclProSettings(BilgiLbl.clProSettings);
+
+  if (GpsDenemeSayisi >= 20)
+  {
+    GpsTimer.Enabled = False;
+    BilgiLbl.Text = '⚠️ GPS sinyali alınamadı. Cihaz konum iznini ve GPS servisini kontrol edin.';
+    BilgiLbl.clProSettings.FontColor = clAlphaColor.clHexToColor('#EF4444');
+    BilgiLbl.SetclProSettings(BilgiLbl.clProSettings);
+  }
+}
+
+void OnKonumAlClick;
+{
+  GpsDenemeSayisi = 0;
+  BilgiLbl.Text = 'Cihazdan canlı konum ve REST verisi isteniyor...';
+  BilgiLbl.clProSettings.FontColor = clAlphaColor.clHexToColor('#F59E0B');
+  BilgiLbl.SetclProSettings(BilgiLbl.clProSettings);
+
+  Clomosy.GetCurrentLocation;
+  GpsTimer.Enabled = True;
+}
+
+{
+  GpsDenemeSayisi = 0;
+
+  AnaForm = TCLForm.Create(Self);
+  AnaForm.clSetCaption('Canlı Konum & Hava Durumu (TclRest)');
+  AnaForm.SetFormColor('#0B0F19', '#0B0F19', clGNone);
+
+  RestServis = TclRest.Create;
+
+  PnlUst = AnaForm.AddNewProPanel(AnaForm, 'PnlUst');
+  PnlUst.Align = alTop;
+  PnlUst.Height = 55;
+  PnlUst.Margins.Top = 10;
+  PnlUst.Margins.Left = 14;
+  PnlUst.Margins.Right = 14;
+  PnlUst.clProSettings.IsFill = False;
+  PnlUst.SetclProSettings(PnlUst.clProSettings);
+
+  UstBaslikLbl = AnaForm.AddNewProLabel(PnlUst, 'UstBaslikLbl', '🌦️ HAVA & KONUM (REST)');
+  UstBaslikLbl.Align = alLeft;
+  UstBaslikLbl.Width = AnaForm.clWidth * 0.55;
+  UstBaslikLbl.Height = 50;
+  UstBaslikLbl.clProSettings.FontSize = 14;
+  UstBaslikLbl.clProSettings.FontColor = clAlphaColor.clWhite;
+  UstBaslikLbl.clProSettings.FontVertAlign = palCenter;
+  UstBaslikLbl.clProSettings.TextSettings.Font.Style = [fsBold];
+  UstBaslikLbl.SetclProSettings(UstBaslikLbl.clProSettings);
+
+  KonumAlBtn = AnaForm.AddNewProButton(PnlUst, 'KonumAlBtn', '📍 Konumu Al');
+  KonumAlBtn.Align = alRight;
+  KonumAlBtn.Width = 120;
+  KonumAlBtn.Height = 40;
+  KonumAlBtn.Margins.Top = 6;
+  KonumAlBtn.Margins.Bottom = 6;
+  KonumAlBtn.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#D97706');
+  KonumAlBtn.clProSettings.FontColor = clAlphaColor.clWhite;
+  KonumAlBtn.clProSettings.FontSize = 12;
+  KonumAlBtn.clProSettings.TextSettings.Font.Style = [fsBold];
+  KonumAlBtn.clProSettings.IsRound = True;
+  KonumAlBtn.clProSettings.RoundHeight = 8;
+  KonumAlBtn.clProSettings.RoundWidth = 8;
+  KonumAlBtn.clProSettings.IsFill = True;
+  KonumAlBtn.SetclProSettings(KonumAlBtn.clProSettings);
+  AnaForm.AddNewEvent(KonumAlBtn, tbeOnClick, 'OnKonumAlClick');
+
+  BilgiLbl = AnaForm.AddNewProLabel(AnaForm, 'BilgiLbl', 'Canlı REST hava durumu için "Konumu Al" butonuna basın.');
+  BilgiLbl.Align = alTop;
+  BilgiLbl.Height = 22;
+  BilgiLbl.Margins.Top = 4;
+  BilgiLbl.Margins.Left = 14;
+  BilgiLbl.Margins.Right = 14;
+  BilgiLbl.clProSettings.FontSize = 11;
+  BilgiLbl.clProSettings.FontColor = clAlphaColor.clHexToColor('#94A3B8');
+  BilgiLbl.clProSettings.FontHorzAlign = palCenter;
+  BilgiLbl.SetclProSettings(BilgiLbl.clProSettings);
+
+  PnlHavaDurumu = AnaForm.AddNewProPanel(AnaForm, 'PnlHavaDurumu');
+  PnlHavaDurumu.Align = alTop;
+  PnlHavaDurumu.Height = 42;
+  PnlHavaDurumu.Margins.Top = 6;
+  PnlHavaDurumu.Margins.Left = 14;
+  PnlHavaDurumu.Margins.Right = 14;
+  PnlHavaDurumu.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#111827');
+  PnlHavaDurumu.clProSettings.BorderColor = clAlphaColor.clHexToColor('#1E293B');
+  PnlHavaDurumu.clProSettings.BorderWidth = 1;
+  PnlHavaDurumu.clProSettings.IsRound = True;
+  PnlHavaDurumu.clProSettings.RoundHeight = 8;
+  PnlHavaDurumu.clProSettings.RoundWidth = 8;
+  PnlHavaDurumu.clProSettings.IsFill = True;
+  PnlHavaDurumu.SetclProSettings(PnlHavaDurumu.clProSettings);
+  PnlHavaDurumu.Visible = False;
+
+  HavaDurumuLbl = AnaForm.AddNewProLabel(PnlHavaDurumu, 'HavaDurumuLbl', '');
+  HavaDurumuLbl.Align = alClient;
+  HavaDurumuLbl.clProSettings.FontSize = 12;
+  HavaDurumuLbl.clProSettings.FontColor = clAlphaColor.clHexToColor('#38BDF8');
+  HavaDurumuLbl.clProSettings.FontHorzAlign = palCenter;
+  HavaDurumuLbl.clProSettings.FontVertAlign = palCenter;
+  HavaDurumuLbl.clProSettings.TextSettings.Font.Style = [fsBold];
+  HavaDurumuLbl.SetclProSettings(HavaDurumuLbl.clProSettings);
+
+  HaritaBrowser = AnaForm.AddNewProWebBrowser(AnaForm, 'HaritaBrowser');
+  HaritaBrowser.Align = alClient;
+  HaritaBrowser.Margins.Top = 8;
+  HaritaBrowser.Margins.Left = 14;
+  HaritaBrowser.Margins.Right = 14;
+  HaritaBrowser.Margins.Bottom = 14;
+
+  GpsTimer = AnaForm.AddNewTimer(AnaForm, 'GpsTimer', 1000);
+  GpsTimer.Enabled = False;
+  AnaForm.AddNewEvent(GpsTimer, tbeOnTimer, 'OnGpsTimerTick');
+
+  try
+    AnaForm.BtnFormMenu.Visible = False;
+    AnaForm.BtnGoBack.Visible = False;
+  except
+  }
+
+  HaritaBrowser.LoadHTML(BeklemeEkraniHtml);
+
+  AnaForm.Run;
+}
