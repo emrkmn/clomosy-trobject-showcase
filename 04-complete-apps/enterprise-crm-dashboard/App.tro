@@ -1,0 +1,2270 @@
+var
+  AnaForm: TclForm;
+  PnlMainPage, PnlContentContainer, PnlDashboardView, PnlListView: TclProPanel;
+  
+  // Header
+  PnlHeader, PnlLogo, PnlHeaderTexts, PnlSearchHeader, PnlProfile: TclProPanel;
+  LblLogo, LblBrandTitle, LblBrandSub, LblProfileName: TclProLabel;
+  EdtSearchHeader: TclProEdit;
+  BtnQuickAdd, BtnBell, BtnProfilePic: TclProButton;
+  
+  // Tab Bar
+  PnlTabsRow: TclProPanel;
+  SbTabsHorz: TclHorzScrollBox;
+  BtnTabAll, BtnTabFirsat, BtnTabTeklif, BtnTabMusteri, BtnTabGorevler, BtnTabAnalizler: TclProButton;
+  
+  // Dashboard KPI Cards
+  SbKpiHorz: TclHorzScrollBox;
+  PnlKpi1, PnlKpi2, PnlKpi3, PnlKpi4: TclProPanel;
+  PnlKpi1Left, PnlKpi1Right, PnlKpi2Left, PnlKpi2Right, PnlKpi3Left, PnlKpi3Right, PnlKpi4Left, PnlKpi4Right: TclProPanel;
+  PnlKpi1IconBg, PnlKpi2IconBg, PnlKpi3IconBg, PnlKpi4IconBg: TclProPanel;
+  LblKpi1Title, LblKpi1Val, LblKpi1Sub, LblKpi1Icon, LblKpi1Trend: TclProLabel;
+  LblKpi2Title, LblKpi2Val, LblKpi2Sub, LblKpi2Icon, LblKpi2Trend: TclProLabel;
+  LblKpi3Title, LblKpi3Val, LblKpi3Sub, LblKpi3Icon, LblKpi3Trend: TclProLabel;
+  LblKpi4Title, LblKpi4Val, LblKpi4Sub, LblKpi4Icon, LblKpi4Trend: TclProLabel;
+
+  // Dashboard Visuals
+  PnlBottomSplit: TclProPanel;
+  PnlChartCard, PnlActivityCard: TclProPanel;
+  PnlChartHeader, PnlChartBody: TclProPanel;
+  LblChartTitle, LblChartSub: TclProLabel;
+  PnlCol1, PnlCol2, PnlCol3, PnlCol4, PnlCol5, PnlCol6: TclProPanel;
+  PnlBar1, PnlBar2, PnlBar3, PnlBar4, PnlBar5, PnlBar6: TclProPanel;
+  LblMon1, LblMon2, LblMon3, LblMon4, LblMon5, LblMon6: TclProLabel;
+  
+  PnlActivityHeader: TclProPanel;
+  LblActivityTitle: TclProLabel;
+  SbActivities: TclVertScrollBox;
+  
+  // List View Controls
+  PnlNavFilter, PnlSearch, PnlFilter, PnlScrollTasiyici: TclProPanel;
+  EdtSearch: TclProEdit;
+  BtnFAll, BtnFFirsat, BtnFTeklif, BtnFKazanilan: TclProButton;
+  SbCustomers: TclVertScrollBox;
+  
+  // Pop-up Modal
+  PnlModalOverlay, PnlModalDialog, PnlModalHeader, PnlModalStateRow: TclProPanel;
+  SbModalScroll: TclVertScrollBox;
+  LblModalTitle, LblModalSub, LblModalStateTitle: TclProLabel;
+  EdtNewName, EdtNewCompany, EdtNewPhone, EdtNewEmail, EdtNewIndustry, EdtNewValue: TclProEdit;
+  BtnSaveNew, BtnCloseModal, BtnCloseModalX: TclProButton;
+  BtnMState0, BtnMState1, BtnMState2, BtnMState3: TclProButton;
+  
+  ActiveFilter, SelectedNewState, RenderSurum, ActSurum: Integer;
+  SearchKeyword: String;
+  TempQry: TClSQLiteQuery;
+
+void SetCardStyle(APanel: TclProPanel);
+{
+  APanel.Align = alTop;
+  APanel.Height = 76;
+  APanel.Margins.Top = 6;
+  APanel.Margins.Left = 14;
+  APanel.Margins.Right = 14;
+  APanel.Margins.Bottom = 2;
+  APanel.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  APanel.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  APanel.clProSettings.BorderWidth = 1;
+  APanel.clProSettings.IsRound = True;
+  APanel.clProSettings.RoundHeight = 12;
+  APanel.clProSettings.RoundWidth = 12;
+  APanel.clProSettings.IsFill = True;
+  APanel.SetclProSettings(APanel.clProSettings);
+}
+
+void SetEditStyle(AEdit: TclProEdit);
+{
+  AEdit.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F8FAFC');
+  AEdit.clProSettings.BorderColor = clAlphaColor.clHexToColor('#CBD5E1');
+  AEdit.clProSettings.BorderWidth = 1;
+  AEdit.clProSettings.FontColor = clAlphaColor.clHexToColor('#0F172A');
+  AEdit.clProSettings.FontSize = 11;
+  AEdit.clProSettings.IsRound = True;
+  AEdit.clProSettings.RoundHeight = 8;
+  AEdit.clProSettings.RoundWidth = 8;
+  AEdit.clProSettings.IsFill = True;
+  AEdit.SetclProSettings(AEdit.clProSettings);
+}
+
+void SetStatusPill(APanel: TclProPanel; ALbl: TclProLabel; AState: Integer);
+var
+  BgCol, FgCol, StatusText: String;
+{
+  if (AState == 0)
+  {
+    StatusText = 'Fırsat';
+    BgCol = '#FEF3C7';
+    FgCol = '#D97706';
+  }
+  else if (AState == 1)
+  {
+    StatusText = 'Görüşme';
+    BgCol = '#E0F2FE';
+    FgCol = '#0284C7';
+  }
+  else if (AState == 2)
+  {
+    StatusText = 'Teklif';
+    BgCol = '#F3E8FF';
+    FgCol = '#7C3AED';
+  }
+  else
+  {
+    StatusText = 'Kazanıldı';
+    BgCol = '#D1FAE5';
+    FgCol = '#059669';
+  }
+
+  APanel.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(BgCol);
+  APanel.clProSettings.BorderColor = clAlphaColor.clHexToColor(FgCol);
+  APanel.clProSettings.BorderWidth = 1;
+  APanel.SetclProSettings(APanel.clProSettings);
+
+  ALbl.Text = StatusText;
+  ALbl.clProSettings.FontColor = clAlphaColor.clHexToColor(FgCol);
+  ALbl.SetclProSettings(ALbl.clProSettings);
+}
+
+void SetBarStyle(APanel: TclProPanel; AHeight: Integer; AColor: String);
+{
+  APanel.Align = alBottom;
+  APanel.Width = 22;
+  APanel.Height = AHeight;
+  APanel.Margins.Left = 8;
+  APanel.Margins.Right = 8;
+  APanel.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(AColor);
+  APanel.clProSettings.IsRound = True;
+  APanel.clProSettings.RoundHeight = 6;
+  APanel.clProSettings.RoundWidth = 6;
+  APanel.clProSettings.IsFill = True;
+  APanel.SetclProSettings(APanel.clProSettings);
+}
+
+void SetMonthLabelStyle(ALbl: TclProLabel; AText: String);
+{
+  ALbl.Align = alBottom;
+  ALbl.Height = 18;
+  ALbl.Text = AText;
+  ALbl.clProSettings.FontSize = 9;
+  ALbl.clProSettings.FontColor = clAlphaColor.clHexToColor('#94A3B8');
+  ALbl.clProSettings.FontHorzAlign = palCenter;
+  ALbl.clProSettings.TextSettings.Font.Style = [fsBold];
+  ALbl.SetclProSettings(ALbl.clProSettings);
+}
+
+void VeritabaniHazirla;
+{
+  try
+    Clomosy.DBSQLiteConnect(Clomosy.AppFilesPath + 'crm.db3', '');
+    Clomosy.DBSQLiteQuery.Sql.Text = 'CREATE TABLE IF NOT EXISTS customers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, company TEXT, phone TEXT, email TEXT, industry TEXT, value REAL, state INTEGER, created_at TEXT);';
+    Clomosy.DBSQLiteQuery.OpenOrExecute;
+
+    try
+      Clomosy.DBSQLiteQuery.Sql.Text = 'ALTER TABLE customers ADD COLUMN industry TEXT';
+      Clomosy.DBSQLiteQuery.OpenOrExecute;
+    except
+    }
+
+    try
+      Clomosy.DBSQLiteQuery.Sql.Text = 'ALTER TABLE customers ADD COLUMN value REAL DEFAULT 0';
+      Clomosy.DBSQLiteQuery.OpenOrExecute;
+    except
+    }
+
+    try
+      Clomosy.DBSQLiteQuery.Sql.Text = 'ALTER TABLE customers ADD COLUMN created_at TEXT';
+      Clomosy.DBSQLiteQuery.OpenOrExecute;
+    except
+    }
+  except
+    ShowMessage('Veritabanı Hatası: ' + LastExceptionMessage);
+  }
+}
+
+// --- DİNAMİK AYLIK GRAFİK ÇİZİCİ ---
+void GuncelleGrafik;
+var
+  QryG: TClSQLiteQuery;
+  TotalVal: Double;
+  H1, H2, H3, H4, H5, H6: Integer;
+{
+  H1 = 30; H2 = 55; H3 = 45; H4 = 80; H5 = 65; H6 = 90;
+
+  try
+    QryG = Clomosy.DBSQLiteQueryWith('SELECT SUM(value) as val FROM customers WHERE state = 3');
+    QryG.OpenOrExecute;
+    if (QryG.Found)
+    {
+      TotalVal = QryG.FieldByName('val').AsFloat;
+      if (TotalVal > 0)
+      {
+        H6 = 40 + Trunc((TotalVal / 20000));
+        if (H6 > 145)
+          H6 = 145;
+        if (H6 < 40)
+          H6 = 40;
+      }
+    }
+  except
+  }
+
+  SetBarStyle(PnlBar1, H1, '#2563EB');
+  SetBarStyle(PnlBar2, H2, '#10B981');
+  SetBarStyle(PnlBar3, H3, '#2563EB');
+  SetBarStyle(PnlBar4, H4, '#10B981');
+  SetBarStyle(PnlBar5, H5, '#2563EB');
+  SetBarStyle(PnlBar6, H6, '#10B981');
+}
+
+// --- DİNAMİK SON AKTİVİTELER LİSTESİ ---
+void GuncelleAktiviteler;
+var
+  QryA: TClSQLiteQuery;
+  PnlItem, PnlIconBg, PnlTexts: TclProPanel;
+  LblIcon, LblTtl, LblSubt, LblTm: TclProLabel;
+  CustName, CustComp, DurumStr, IconStr, IconBgHex, ValStr: String;
+  CustState, CustId: Integer;
+  CustVal: Double;
+{
+  ActSurum = ActSurum + 1;
+
+  try
+    if (SbActivities <> nil)
+    {
+      SbActivities.Free;
+    }
+  except
+  }
+
+  SbActivities = AnaForm.AddNewVertScrollBox(PnlActivityCard, 'SbActivities_' + IntToStr(ActSurum));
+  SbActivities.Align = alClient;
+  SbActivities.Margins.Left = 14;
+  SbActivities.Margins.Right = 14;
+  SbActivities.Margins.Bottom = 8;
+
+  try
+    QryA = Clomosy.DBSQLiteQueryWith('SELECT id, name, company, value, state, industry FROM customers ORDER BY id DESC LIMIT 10');
+    QryA.OpenOrExecute;
+
+    if (QryA.Found)
+    {
+      while (not QryA.EOF)
+      {
+        CustId = QryA.FieldByName('id').AsInteger;
+        CustName = QryA.FieldByName('name').AsString;
+        CustComp = QryA.FieldByName('company').AsString;
+        CustVal = QryA.FieldByName('value').AsFloat;
+        CustState = QryA.FieldByName('state').AsInteger;
+
+        ValStr = '₺' + FormatFloat('#,##0', CustVal);
+
+        if (CustState == 3)
+        {
+          DurumStr = 'Teklif onaylandı (' + ValStr + ')';
+          IconStr = '✓';
+          IconBgHex = '#E6F4EA';
+        }
+        else if (CustState == 2)
+        {
+          DurumStr = 'Teklif hazırlandı (' + ValStr + ')';
+          IconStr = '📄';
+          IconBgHex = '#FEF3C7';
+        }
+        else if (CustState == 1)
+        {
+          DurumStr = 'Görüşme planlandı';
+          IconStr = '💬';
+          IconBgHex = '#EFF6FF';
+        }
+        else
+        {
+          DurumStr = 'Yeni fırsat eklendi (' + ValStr + ')';
+          IconStr = '👤';
+          IconBgHex = '#F1F5F9';
+        }
+
+        PnlItem = AnaForm.AddNewProPanel(SbActivities, 'PnlActItem_' + IntToStr(ActSurum) + '_' + IntToStr(CustId));
+        PnlItem.Align = alTop;
+        PnlItem.Height = 54;
+        PnlItem.Margins.Top = 4;
+        PnlItem.clProSettings.IsFill = False;
+        PnlItem.SetclProSettings(PnlItem.clProSettings);
+
+        PnlIconBg = AnaForm.AddNewProPanel(PnlItem, 'PnlActIconBg_' + IntToStr(ActSurum) + '_' + IntToStr(CustId));
+        PnlIconBg.Align = alLeft;
+        PnlIconBg.Width = 34;
+        PnlIconBg.Height = 34;
+        PnlIconBg.Margins.Top = 8;
+        PnlIconBg.Margins.Bottom = 8;
+        PnlIconBg.Margins.Left = 6;
+        PnlIconBg.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(IconBgHex);
+        PnlIconBg.clProSettings.IsRound = True;
+        PnlIconBg.clProSettings.RoundHeight = 17;
+        PnlIconBg.clProSettings.RoundWidth = 17;
+        PnlIconBg.clProSettings.IsFill = True;
+        PnlIconBg.SetclProSettings(PnlIconBg.clProSettings);
+
+        LblIcon = AnaForm.AddNewProLabel(PnlIconBg, 'LblActIcon_' + IntToStr(ActSurum) + '_' + IntToStr(CustId), IconStr);
+        LblIcon.Align = alClient;
+        LblIcon.clProSettings.FontSize = 11;
+        LblIcon.clProSettings.FontHorzAlign = palCenter;
+        LblIcon.clProSettings.FontVertAlign = palCenter;
+        LblIcon.SetclProSettings(LblIcon.clProSettings);
+
+        PnlTexts = AnaForm.AddNewProPanel(PnlItem, 'PnlActTexts_' + IntToStr(ActSurum) + '_' + IntToStr(CustId));
+        PnlTexts.Align = alClient;
+        PnlTexts.clProSettings.IsFill = False;
+        PnlTexts.SetclProSettings(PnlTexts.clProSettings);
+
+        LblTtl = AnaForm.AddNewProLabel(PnlTexts, 'LblActTtl_' + IntToStr(ActSurum) + '_' + IntToStr(CustId), DurumStr);
+        LblTtl.Align = alTop;
+        LblTtl.Height = 18;
+        LblTtl.Margins.Left = 10;
+        LblTtl.Margins.Top = 4;
+        LblTtl.clProSettings.FontSize = 11;
+        LblTtl.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E293B');
+        LblTtl.clProSettings.TextSettings.Font.Style = [fsBold];
+        LblTtl.SetclProSettings(LblTtl.clProSettings);
+
+        LblSubt = AnaForm.AddNewProLabel(PnlTexts, 'LblActSubt_' + IntToStr(ActSurum) + '_' + IntToStr(CustId), CustName + ' (' + CustComp + ')');
+        LblSubt.Align = alTop;
+        LblSubt.Height = 16;
+        LblSubt.Margins.Left = 10;
+        LblSubt.clProSettings.FontSize = 9;
+        LblSubt.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+        LblSubt.SetclProSettings(LblSubt.clProSettings);
+
+        LblTm = AnaForm.AddNewProLabel(PnlTexts, 'LblActTm_' + IntToStr(ActSurum) + '_' + IntToStr(CustId), 'Güncel');
+        LblTm.Align = alBottom;
+        LblTm.Height = 14;
+        LblTm.Margins.Left = 10;
+        LblTm.Margins.Bottom = 2;
+        LblTm.clProSettings.FontSize = 8;
+        LblTm.clProSettings.FontColor = clAlphaColor.clHexToColor('#94A3B8');
+        LblTm.SetclProSettings(LblTm.clProSettings);
+
+        QryA.Next;
+      }
+    }
+  except
+  }
+}
+
+void GuncelleIstatistik;
+var
+  Qry: TClSQLiteQuery;
+  TotalCount, WonCount, ActiveCount, WinRate, QuotesCount: Integer;
+  TotalVolume, WonVolume, ActiveVolume: Double;
+{
+  TotalCount = 0;
+  WonCount = 0;
+  ActiveCount = 0;
+  QuotesCount = 0;
+  TotalVolume = 0;
+  WonVolume = 0;
+  ActiveVolume = 0;
+  WinRate = 0;
+
+  try
+    Qry = Clomosy.DBSQLiteQueryWith('SELECT state, COUNT(*) as cnt, COALESCE(SUM(value), 0) as val FROM customers GROUP BY state');
+    Qry.OpenOrExecute;
+    
+    if (Qry.Found)
+    {
+      while (not Qry.EOF)
+      {
+        TotalCount = TotalCount + Qry.FieldByName('cnt').AsInteger;
+        TotalVolume = TotalVolume + Qry.FieldByName('val').AsFloat;
+
+        if (Qry.FieldByName('state').AsInteger == 3)
+        {
+          WonCount = WonCount + Qry.FieldByName('cnt').AsInteger;
+          WonVolume = WonVolume + Qry.FieldByName('val').AsFloat;
+        }
+        else if (Qry.FieldByName('state').AsInteger == 2)
+        {
+          QuotesCount = QuotesCount + Qry.FieldByName('cnt').AsInteger;
+        }
+        else
+        {
+          ActiveCount = ActiveCount + Qry.FieldByName('cnt').AsInteger;
+          ActiveVolume = ActiveVolume + Qry.FieldByName('val').AsFloat;
+        }
+        Qry.Next;
+      }
+    }
+  except
+  }
+
+  if (TotalCount > 0)
+  {
+    WinRate = Trunc((WonCount * 100) / TotalCount);
+  }
+
+  LblKpi1Val.Text = '₺' + FormatFloat('#,##0', TotalVolume);
+  LblKpi2Val.Text = IntToStr(ActiveCount) + ' Fırsat';
+  LblKpi2Trend.Text = '₺' + FormatFloat('#,##0', ActiveVolume);
+  LblKpi3Val.Text = IntToStr(QuotesCount) + ' Adet';
+  LblKpi4Val.Text = '%' + IntToStr(WinRate);
+
+  BtnTabFirsat.Text = '💼 Fırsatlar ' + IntToStr(ActiveCount);
+  BtnTabTeklif.Text = '📄 Teklifler ' + IntToStr(QuotesCount);
+  BtnTabMusteri.Text = '👥 Müşteriler ' + IntToStr(TotalCount);
+
+  GuncelleGrafik;
+  GuncelleAktiviteler;
+}
+
+void OnCallClick;
+var
+  CustId: Integer;
+  QryTel: TClSQLiteQuery;
+  PhoneStr: String;
+{
+  CustId = TclProButton(AnaForm.ClSender).ClTagInt;
+  try
+    QryTel = Clomosy.DBSQLiteQueryWith('SELECT phone FROM customers WHERE id = ' + IntToStr(CustId));
+    QryTel.OpenOrExecute;
+    if (QryTel.Found)
+    {
+      PhoneStr = Trim(QryTel.FieldByName('phone').AsString);
+      if (PhoneStr <> '')
+      {
+        TClomosyOS.Dial(PhoneStr);
+      }
+    }
+  except
+  }
+}
+
+void OnWAClick;
+var
+  CustId: Integer;
+  QryWA: TClSQLiteQuery;
+  PhoneStr: String;
+{
+  CustId = TclProButton(AnaForm.ClSender).ClTagInt;
+  try
+    QryWA = Clomosy.DBSQLiteQueryWith('SELECT phone FROM customers WHERE id = ' + IntToStr(CustId));
+    QryWA.OpenOrExecute;
+    if (QryWA.Found)
+    {
+      PhoneStr = Trim(QryWA.FieldByName('phone').AsString);
+      if (PhoneStr <> '')
+      {
+        TClomosyOS.OpenURL('https://wa.me/90' + PhoneStr);
+      }
+    }
+  except
+  }
+}
+
+void OnMailClick;
+var
+  CustId: Integer;
+  QryMail: TClSQLiteQuery;
+  EmailStr, CustNameStr: String;
+{
+  CustId = TclProButton(AnaForm.ClSender).ClTagInt;
+  try
+    QryMail = Clomosy.DBSQLiteQueryWith('SELECT name, email FROM customers WHERE id = ' + IntToStr(CustId));
+    QryMail.OpenOrExecute;
+    if (QryMail.Found)
+    {
+      EmailStr = Trim(QryMail.FieldByName('email').AsString);
+      CustNameStr = Trim(QryMail.FieldByName('name').AsString);
+      if (EmailStr <> '')
+      {
+        TClomosyOS.OpenEmail(EmailStr, 'Clomosy App - ' + CustNameStr + ' Bilgilendirme', 'Merhaba ' + CustNameStr + ',');
+      }
+    }
+  except
+  }
+}
+
+void ListeleMusteriler;
+var
+  Qry: TClSQLiteQuery;
+  IDStr, QueryStr, IdEk, CustName, CustChar, IndStr: String;
+  ValNum: Double;
+  PnlCard, PnlCardHead, PnlAvatar, PnlLeft, PnlRightWrap, PnlStatus, PnlDetail, PnlCommRow, PnlSel, PnlRow1, PnlRow2: TclProPanel;
+  LblAvatar, LblName, LblCompany, LblValue, LblStatus, LblPhone, LblEmail: TclProLabel;
+  BtnCall, BtnWA, BtnMail, BtnSetF, BtnSetG, BtnSetT, BtnSetK, BtnDelete: TclProButton;
+  ItemBtnWidth, CommBtnWidth: Single;
+{
+  RenderSurum = RenderSurum + 1;
+
+  try
+    if (SbCustomers <> nil)
+    {
+      SbCustomers.Free;
+    }
+  except
+  }
+
+  SbCustomers = AnaForm.AddNewVertScrollBox(PnlScrollTasiyici, 'SbCustomers_' + IntToStr(RenderSurum));
+  SbCustomers.Align = alClient;
+
+  QueryStr = 'SELECT * FROM customers WHERE 1=1';
+  
+  if (SearchKeyword <> '')
+  {
+    QueryStr = QueryStr + ' AND (name LIKE ''%' + SearchKeyword + '%'' OR company LIKE ''%' + SearchKeyword + '%'' OR phone LIKE ''%' + SearchKeyword + '%'' OR industry LIKE ''%' + SearchKeyword + '%'')';
+  }
+
+  if (ActiveFilter == 1)
+  {
+    QueryStr = QueryStr + ' AND (state = 0 OR state = 1)';
+  }
+  else if (ActiveFilter == 2)
+  {
+    QueryStr = QueryStr + ' AND state = 2';
+  }
+  else if (ActiveFilter == 3)
+  {
+    QueryStr = QueryStr + ' AND state = 3';
+  }
+
+  QueryStr = QueryStr + ' ORDER BY id DESC';
+
+  try
+    Qry = Clomosy.DBSQLiteQueryWith(QueryStr);
+    Qry.OpenOrExecute;
+
+    if (Qry.Found)
+    {
+      while (not Qry.EOF)
+      {
+        IDStr = Qry.FieldByName('id').AsString;
+        CustName = Qry.FieldByName('name').AsString;
+        
+        try
+          IndStr = Qry.FieldByName('industry').AsString;
+        except
+          IndStr = 'Genel';
+        }
+
+        try
+          ValNum = Qry.FieldByName('value').AsFloat;
+        except
+          ValNum = 0;
+        }
+
+        IdEk = '_' + IntToStr(RenderSurum) + '_' + IDStr;
+
+        CustChar = 'M';
+        if (Length(Trim(CustName)) > 0)
+        {
+          CustChar = UpperCase(Copy(Trim(CustName), 1, 1));
+        }
+
+        if (IndStr == '')
+        {
+          IndStr = 'Genel';
+        }
+
+        PnlCard = AnaForm.AddNewProPanel(SbCustomers, 'PnlCard' + IdEk);
+        SetCardStyle(PnlCard);
+        PnlCard.Height = 76;
+
+        PnlCardHead = AnaForm.AddNewProPanel(PnlCard, 'PnlHead' + IdEk);
+        PnlCardHead.Align = alTop;
+        PnlCardHead.Height = 76;
+        PnlCardHead.ClTagInt = StrToInt(IDStr);
+        PnlCardHead.clProSettings.IsFill = False;
+        PnlCardHead.SetclProSettings(PnlCardHead.clProSettings);
+        AnaForm.AddNewEvent(PnlCardHead, tbeOnClick, 'OnCardClick');
+
+        PnlAvatar = AnaForm.AddNewProPanel(PnlCardHead, 'PnlAvatar' + IdEk);
+        PnlAvatar.Align = alLeft;
+        PnlAvatar.Width = 42;
+        PnlAvatar.Height = 42;
+        PnlAvatar.Margins.Left = 10;
+        PnlAvatar.Margins.Top = 17;
+        PnlAvatar.Margins.Bottom = 17;
+        PnlAvatar.ClTagInt = StrToInt(IDStr);
+        PnlAvatar.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#EFF6FF');
+        PnlAvatar.clProSettings.BorderColor = clAlphaColor.clHexToColor('#DBEAFE');
+        PnlAvatar.clProSettings.BorderWidth = 1;
+        PnlAvatar.clProSettings.IsRound = True;
+        PnlAvatar.clProSettings.RoundHeight = 21;
+        PnlAvatar.clProSettings.RoundWidth = 21;
+        PnlAvatar.clProSettings.IsFill = True;
+        PnlAvatar.SetclProSettings(PnlAvatar.clProSettings);
+        AnaForm.AddNewEvent(PnlAvatar, tbeOnClick, 'OnCardClick');
+
+        LblAvatar = AnaForm.AddNewProLabel(PnlAvatar, 'LblAvatar' + IdEk, CustChar);
+        LblAvatar.Align = alClient;
+        LblAvatar.ClTagInt = StrToInt(IDStr);
+        LblAvatar.clProSettings.FontSize = 15;
+        LblAvatar.clProSettings.FontColor = clAlphaColor.clHexToColor('#2563EB');
+        LblAvatar.clProSettings.FontHorzAlign = palCenter;
+        LblAvatar.clProSettings.FontVertAlign = palCenter;
+        LblAvatar.clProSettings.TextSettings.Font.Style = [fsBold];
+        LblAvatar.SetclProSettings(LblAvatar.clProSettings);
+        AnaForm.AddNewEvent(LblAvatar, tbeOnClick, 'OnCardClick');
+
+        PnlRightWrap = AnaForm.AddNewProPanel(PnlCardHead, 'PnlRightWrap' + IdEk);
+        PnlRightWrap.Align = alRight;
+        PnlRightWrap.Width = 85;
+        PnlRightWrap.Margins.Right = 10;
+        PnlRightWrap.ClTagInt = StrToInt(IDStr);
+        PnlRightWrap.clProSettings.IsFill = False;
+        PnlRightWrap.SetclProSettings(PnlRightWrap.clProSettings);
+        AnaForm.AddNewEvent(PnlRightWrap, tbeOnClick, 'OnCardClick');
+
+        LblValue = AnaForm.AddNewProLabel(PnlRightWrap, 'LblValue' + IdEk, '₺' + FormatFloat('#,##0', ValNum));
+        LblValue.Align = alTop;
+        LblValue.Height = 22;
+        LblValue.Margins.Top = 15;
+        LblValue.ClTagInt = StrToInt(IDStr);
+        LblValue.clProSettings.FontSize = 11;
+        LblValue.clProSettings.FontColor = clAlphaColor.clHexToColor('#0F172A');
+        LblValue.clProSettings.TextSettings.Font.Style = [fsBold];
+        LblValue.SetclProSettings(LblValue.clProSettings);
+        AnaForm.AddNewEvent(LblValue, tbeOnClick, 'OnCardClick');
+
+        PnlStatus = AnaForm.AddNewProPanel(PnlRightWrap, 'PnlStatus' + IdEk);
+        PnlStatus.Align = alBottom;
+        PnlStatus.Height = 22;
+        PnlStatus.Margins.Bottom = 15;
+        PnlStatus.ClTagInt = StrToInt(IDStr);
+        PnlStatus.clProSettings.IsRound = True;
+        PnlStatus.clProSettings.RoundHeight = 6;
+        PnlStatus.clProSettings.RoundWidth = 6;
+        PnlStatus.clProSettings.IsFill = True;
+        PnlStatus.SetclProSettings(PnlStatus.clProSettings);
+        AnaForm.AddNewEvent(PnlStatus, tbeOnClick, 'OnCardClick');
+
+        LblStatus = AnaForm.AddNewProLabel(PnlStatus, 'LblStatus' + IdEk, ' ');
+        LblStatus.Align = alClient;
+        LblStatus.ClTagInt = StrToInt(IDStr);
+        LblStatus.clProSettings.FontSize = 9;
+        LblStatus.clProSettings.FontHorzAlign = palCenter;
+        LblStatus.clProSettings.FontVertAlign = palCenter;
+        LblStatus.clProSettings.TextSettings.Font.Style = [fsBold];
+        LblStatus.SetclProSettings(LblStatus.clProSettings);
+        AnaForm.AddNewEvent(LblStatus, tbeOnClick, 'OnCardClick');
+
+        SetStatusPill(PnlStatus, LblStatus, Qry.FieldByName('state').AsInteger);
+
+        PnlLeft = AnaForm.AddNewProPanel(PnlCardHead, 'PnlLeft' + IdEk);
+        PnlLeft.Align = alClient;
+        PnlLeft.ClTagInt = StrToInt(IDStr);
+        PnlLeft.clProSettings.IsFill = False;
+        PnlLeft.SetclProSettings(PnlLeft.clProSettings);
+        AnaForm.AddNewEvent(PnlLeft, tbeOnClick, 'OnCardClick');
+
+        LblName = AnaForm.AddNewProLabel(PnlLeft, 'LblName' + IdEk, CustName);
+        LblName.Align = alTop;
+        LblName.Height = 24;
+        LblName.Margins.Left = 8;
+        LblName.Margins.Top = 16;
+        LblName.ClTagInt = StrToInt(IDStr);
+        LblName.clProSettings.FontSize = 13;
+        LblName.clProSettings.FontColor = clAlphaColor.clHexToColor('#0F172A');
+        LblName.clProSettings.TextSettings.Font.Style = [fsBold];
+        LblName.SetclProSettings(LblName.clProSettings);
+        AnaForm.AddNewEvent(LblName, tbeOnClick, 'OnCardClick');
+
+        LblCompany = AnaForm.AddNewProLabel(PnlLeft, 'LblCompany' + IdEk, Qry.FieldByName('company').AsString + ' • ' + IndStr);
+        LblCompany.Align = alBottom;
+        LblCompany.Height = 20;
+        LblCompany.Margins.Left = 8;
+        LblCompany.Margins.Bottom = 16;
+        LblCompany.ClTagInt = StrToInt(IDStr);
+        LblCompany.clProSettings.FontSize = 10;
+        LblCompany.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+        LblCompany.SetclProSettings(LblCompany.clProSettings);
+        AnaForm.AddNewEvent(LblCompany, tbeOnClick, 'OnCardClick');
+
+        PnlDetail = AnaForm.AddNewProPanel(PnlCard, 'PnlDetail' + IdEk);
+        PnlDetail.Align = alClient;
+        PnlDetail.Height = 185;
+        PnlDetail.Visible = False;
+        PnlDetail.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F8FAFC');
+        PnlDetail.clProSettings.IsRound = True;
+        PnlDetail.clProSettings.RoundHeight = 10;
+        PnlDetail.clProSettings.RoundWidth = 10;
+        PnlDetail.clProSettings.IsFill = True;
+        PnlDetail.SetclProSettings(PnlDetail.clProSettings);
+
+        LblPhone = AnaForm.AddNewProLabel(PnlDetail, 'LblPhone' + IdEk, '📞 Telefon: ' + Qry.FieldByName('phone').AsString);
+        LblPhone.Align = alTop;
+        LblPhone.Height = 18;
+        LblPhone.Margins.Left = 14;
+        LblPhone.Margins.Top = 6;
+        LblPhone.clProSettings.FontSize = 11;
+        LblPhone.clProSettings.FontColor = clAlphaColor.clHexToColor('#334155');
+        LblPhone.SetclProSettings(LblPhone.clProSettings);
+
+        LblEmail = AnaForm.AddNewProLabel(PnlDetail, 'LblEmail' + IdEk, '✉️ E-posta: ' + Qry.FieldByName('email').AsString);
+        LblEmail.Align = alTop;
+        LblEmail.Height = 18;
+        LblEmail.Margins.Left = 14;
+        LblEmail.Margins.Top = 2;
+        LblEmail.clProSettings.FontSize = 11;
+        LblEmail.clProSettings.FontColor = clAlphaColor.clHexToColor('#334155');
+        LblEmail.SetclProSettings(LblEmail.clProSettings);
+
+        PnlCommRow = AnaForm.AddNewProPanel(PnlDetail, 'PnlCommRow' + IdEk);
+        PnlCommRow.Align = alTop;
+        PnlCommRow.Height = 28;
+        PnlCommRow.Margins.Left = 12;
+        PnlCommRow.Margins.Right = 12;
+        PnlCommRow.Margins.Top = 6;
+        PnlCommRow.clProSettings.IsFill = False;
+        PnlCommRow.SetclProSettings(PnlCommRow.clProSettings);
+
+        CommBtnWidth = (AnaForm.clWidth - 68) / 3;
+
+        BtnWA = AnaForm.AddNewProButton(PnlCommRow, 'BtnWA' + IdEk, '💬 WA');
+        BtnWA.Align = alLeft;
+        BtnWA.Width = CommBtnWidth;
+        BtnWA.ClTagInt = StrToInt(IDStr);
+        BtnWA.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#DCFCE7');
+        BtnWA.clProSettings.BorderColor = clAlphaColor.clHexToColor('#86EFAC');
+        BtnWA.clProSettings.BorderWidth = 1;
+        BtnWA.clProSettings.FontColor = clAlphaColor.clHexToColor('#16A34A');
+        BtnWA.clProSettings.FontSize = 10;
+        BtnWA.clProSettings.TextSettings.Font.Style = [fsBold];
+        BtnWA.clProSettings.IsRound = True;
+        BtnWA.clProSettings.RoundHeight = 6;
+        BtnWA.clProSettings.RoundWidth = 6;
+        BtnWA.clProSettings.IsFill = True;
+        BtnWA.SetclProSettings(BtnWA.clProSettings);
+        AnaForm.AddNewEvent(BtnWA, tbeOnClick, 'OnWAClick');
+
+        BtnCall = AnaForm.AddNewProButton(PnlCommRow, 'BtnCall' + IdEk, '📞 Ara');
+        BtnCall.Align = alLeft;
+        BtnCall.Margins.Left = 6;
+        BtnCall.Width = CommBtnWidth;
+        BtnCall.ClTagInt = StrToInt(IDStr);
+        BtnCall.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#EFF6FF');
+        BtnCall.clProSettings.BorderColor = clAlphaColor.clHexToColor('#BFDBFE');
+        BtnCall.clProSettings.BorderWidth = 1;
+        BtnCall.clProSettings.FontColor = clAlphaColor.clHexToColor('#2563EB');
+        BtnCall.clProSettings.FontSize = 10;
+        BtnCall.clProSettings.TextSettings.Font.Style = [fsBold];
+        BtnCall.clProSettings.IsRound = True;
+        BtnCall.clProSettings.RoundHeight = 6;
+        BtnCall.clProSettings.RoundWidth = 6;
+        BtnCall.clProSettings.IsFill = True;
+        BtnCall.SetclProSettings(BtnCall.clProSettings);
+        AnaForm.AddNewEvent(BtnCall, tbeOnClick, 'OnCallClick');
+
+        BtnMail = AnaForm.AddNewProButton(PnlCommRow, 'BtnMail' + IdEk, '✉️ Mail');
+        BtnMail.Align = alLeft;
+        BtnMail.Margins.Left = 6;
+        BtnMail.Width = CommBtnWidth;
+        BtnMail.ClTagInt = StrToInt(IDStr);
+        BtnMail.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F3E8FF');
+        BtnMail.clProSettings.BorderColor = clAlphaColor.clHexToColor('#DDD6FE');
+        BtnMail.clProSettings.BorderWidth = 1;
+        BtnMail.clProSettings.FontColor = clAlphaColor.clHexToColor('#7C3AED');
+        BtnMail.clProSettings.FontSize = 10;
+        BtnMail.clProSettings.TextSettings.Font.Style = [fsBold];
+        BtnMail.clProSettings.IsRound = True;
+        BtnMail.clProSettings.RoundHeight = 6;
+        BtnMail.clProSettings.RoundWidth = 6;
+        BtnMail.clProSettings.IsFill = True;
+        BtnMail.SetclProSettings(BtnMail.clProSettings);
+        AnaForm.AddNewEvent(BtnMail, tbeOnClick, 'OnMailClick');
+
+        BtnDelete = AnaForm.AddNewProButton(PnlDetail, 'BtnDelete' + IdEk, 'Sil');
+        BtnDelete.Align = alRight;
+        BtnDelete.Width = 46;
+        BtnDelete.Height = 24;
+        BtnDelete.Margins.Right = 12;
+        BtnDelete.Margins.Top = 6;
+        BtnDelete.Margins.Bottom = 110;
+        BtnDelete.ClTagInt = StrToInt(IDStr);
+        BtnDelete.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FEF2F2');
+        BtnDelete.clProSettings.BorderColor = clAlphaColor.clHexToColor('#FCA5A5');
+        BtnDelete.clProSettings.BorderWidth = 1;
+        BtnDelete.clProSettings.FontColor = clAlphaColor.clHexToColor('#DC2626');
+        BtnDelete.clProSettings.FontSize = 10;
+        BtnDelete.clProSettings.TextSettings.Font.Style = [fsBold];
+        BtnDelete.clProSettings.IsRound = True;
+        BtnDelete.clProSettings.RoundHeight = 6;
+        BtnDelete.clProSettings.RoundWidth = 6;
+        BtnDelete.clProSettings.IsFill = True;
+        BtnDelete.SetclProSettings(BtnDelete.clProSettings);
+        AnaForm.AddNewEvent(BtnDelete, tbeOnClick, 'OnDeleteClick');
+
+        PnlSel = AnaForm.AddNewProPanel(PnlDetail, 'PnlSel' + IdEk);
+        PnlSel.Align = alBottom;
+        PnlSel.Height = 74;
+        PnlSel.Margins.Left = 12;
+        PnlSel.Margins.Right = 12;
+        PnlSel.Margins.Bottom = 8;
+        PnlSel.clProSettings.IsFill = False;
+        PnlSel.SetclProSettings(PnlSel.clProSettings);
+
+        PnlRow1 = AnaForm.AddNewProPanel(PnlSel, 'PnlRow1' + IdEk);
+        PnlRow1.Align = alTop;
+        PnlRow1.Height = 34;
+        PnlRow1.clProSettings.IsFill = False;
+        PnlRow1.SetclProSettings(PnlRow1.clProSettings);
+
+        PnlRow2 = AnaForm.AddNewProPanel(PnlSel, 'PnlRow2' + IdEk);
+        PnlRow2.Align = alBottom;
+        PnlRow2.Height = 34;
+        PnlRow2.clProSettings.IsFill = False;
+        PnlRow2.SetclProSettings(PnlRow2.clProSettings);
+
+        ItemBtnWidth = (AnaForm.clWidth - 68) / 2;
+
+        BtnSetF = AnaForm.AddNewProButton(PnlRow1, 'BtnSetF' + IdEk, 'Fırsat');
+        BtnSetF.Align = alLeft;
+        BtnSetF.Width = ItemBtnWidth;
+        BtnSetF.ClTagInt = StrToInt(IDStr);
+        BtnSetF.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+        BtnSetF.clProSettings.BorderColor = clAlphaColor.clHexToColor('#D97706');
+        BtnSetF.clProSettings.BorderWidth = 1;
+        BtnSetF.clProSettings.FontColor = clAlphaColor.clHexToColor('#D97706');
+        BtnSetF.clProSettings.FontSize = 10;
+        BtnSetF.clProSettings.TextSettings.Font.Style = [fsBold];
+        BtnSetF.clProSettings.IsRound = True;
+        BtnSetF.clProSettings.RoundHeight = 6;
+        BtnSetF.clProSettings.RoundWidth = 6;
+        BtnSetF.clProSettings.IsFill = True;
+        BtnSetF.SetclProSettings(BtnSetF.clProSettings);
+        AnaForm.AddNewEvent(BtnSetF, tbeOnClick, 'OnSetFClick');
+
+        BtnSetG = AnaForm.AddNewProButton(PnlRow1, 'BtnSetG' + IdEk, 'Görüşme');
+        BtnSetG.Align = alLeft;
+        BtnSetG.Margins.Left = 6;
+        BtnSetG.Width = ItemBtnWidth;
+        BtnSetG.ClTagInt = StrToInt(IDStr);
+        BtnSetG.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+        BtnSetG.clProSettings.BorderColor = clAlphaColor.clHexToColor('#0284C7');
+        BtnSetG.clProSettings.BorderWidth = 1;
+        BtnSetG.clProSettings.FontColor = clAlphaColor.clHexToColor('#0284C7');
+        BtnSetG.clProSettings.FontSize = 10;
+        BtnSetG.clProSettings.TextSettings.Font.Style = [fsBold];
+        BtnSetG.clProSettings.IsRound = True;
+        BtnSetG.clProSettings.RoundHeight = 6;
+        BtnSetG.clProSettings.RoundWidth = 6;
+        BtnSetG.clProSettings.IsFill = True;
+        BtnSetG.SetclProSettings(BtnSetG.clProSettings);
+        AnaForm.AddNewEvent(BtnSetG, tbeOnClick, 'OnSetGClick');
+
+        BtnSetT = AnaForm.AddNewProButton(PnlRow2, 'BtnSetT' + IdEk, 'Teklif');
+        BtnSetT.Align = alLeft;
+        BtnSetT.Width = ItemBtnWidth;
+        BtnSetT.ClTagInt = StrToInt(IDStr);
+        BtnSetT.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+        BtnSetT.clProSettings.BorderColor = clAlphaColor.clHexToColor('#7C3AED');
+        BtnSetT.clProSettings.BorderWidth = 1;
+        BtnSetT.clProSettings.FontColor = clAlphaColor.clHexToColor('#7C3AED');
+        BtnSetT.clProSettings.FontSize = 10;
+        BtnSetT.clProSettings.TextSettings.Font.Style = [fsBold];
+        BtnSetT.clProSettings.IsRound = True;
+        BtnSetT.clProSettings.RoundHeight = 6;
+        BtnSetT.clProSettings.RoundWidth = 6;
+        BtnSetT.clProSettings.IsFill = True;
+        BtnSetT.SetclProSettings(BtnSetT.clProSettings);
+        AnaForm.AddNewEvent(BtnSetT, tbeOnClick, 'OnSetTClick');
+
+        BtnSetK = AnaForm.AddNewProButton(PnlRow2, 'BtnSetK' + IdEk, 'Kazanıldı');
+        BtnSetK.Align = alLeft;
+        BtnSetK.Margins.Left = 6;
+        BtnSetK.Width = ItemBtnWidth;
+        BtnSetK.ClTagInt = StrToInt(IDStr);
+        BtnSetK.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+        BtnSetK.clProSettings.BorderColor = clAlphaColor.clHexToColor('#059669');
+        BtnSetK.clProSettings.BorderWidth = 1;
+        BtnSetK.clProSettings.FontColor = clAlphaColor.clHexToColor('#059669');
+        BtnSetK.clProSettings.FontSize = 10;
+        BtnSetK.clProSettings.TextSettings.Font.Style = [fsBold];
+        BtnSetK.clProSettings.IsRound = True;
+        BtnSetK.clProSettings.RoundHeight = 6;
+        BtnSetK.clProSettings.RoundWidth = 6;
+        BtnSetK.clProSettings.IsFill = True;
+        BtnSetK.SetclProSettings(BtnSetK.clProSettings);
+        AnaForm.AddNewEvent(BtnSetK, tbeOnClick, 'OnSetKClick');
+
+        Qry.Next;
+      }
+    }
+  except
+    ShowMessage('Listeleme Hatası: ' + LastExceptionMessage);
+  }
+
+  GuncelleIstatistik;
+}
+
+void OnCardClick;
+var
+  TiklananBilesen: TclProPanel;
+  CustId: Integer;
+  IdEk: String;
+  PnlCard, PnlDetail: TclProPanel;
+{
+  TiklananBilesen = TclProPanel(AnaForm.ClSender);
+  CustId = TiklananBilesen.ClTagInt;
+  IdEk = '_' + IntToStr(RenderSurum) + '_' + IntToStr(CustId);
+
+  PnlCard = TclProPanel(AnaForm.clFindComponent('PnlCard' + IdEk));
+  PnlDetail = TclProPanel(AnaForm.clFindComponent('PnlDetail' + IdEk));
+
+  if ((PnlCard <> nil) && (PnlDetail <> nil))
+  {
+    if (not PnlDetail.Visible)
+    {
+      PnlCard.Height = 265;
+      PnlDetail.Visible = True;
+    }
+    else
+    {
+      PnlDetail.Visible = False;
+      PnlCard.Height = 76;
+    }
+  }
+}
+
+void DurumGuncelle(CustId, NewState: Integer);
+var
+  IdEk: String;
+  PnlStatus: TclProPanel;
+  LblStatus: TclProLabel;
+{
+  try
+    Clomosy.DBSQLiteQuery.Sql.Text = 'UPDATE customers SET state = ' + IntToStr(NewState) + ' WHERE id = ' + IntToStr(CustId);
+    Clomosy.DBSQLiteQuery.OpenOrExecute;
+
+    IdEk = '_' + IntToStr(RenderSurum) + '_' + IntToStr(CustId);
+    PnlStatus = TclProPanel(AnaForm.clFindComponent('PnlStatus' + IdEk));
+    LblStatus = TclProLabel(AnaForm.clFindComponent('LblStatus' + IdEk));
+    
+    if ((PnlStatus <> nil) && (LblStatus <> nil))
+    {
+      SetStatusPill(PnlStatus, LblStatus, NewState);
+    }
+
+    GuncelleIstatistik;
+  except
+    ShowMessage('Güncelleme Hatası: ' + LastExceptionMessage);
+  }
+}
+
+void OnSetFClick; { DurumGuncelle(TclProButton(AnaForm.ClSender).ClTagInt, 0); }
+void OnSetGClick; { DurumGuncelle(TclProButton(AnaForm.ClSender).ClTagInt, 1); }
+void OnSetTClick; { DurumGuncelle(TclProButton(AnaForm.ClSender).ClTagInt, 2); }
+void OnSetKClick; { DurumGuncelle(TclProButton(AnaForm.ClSender).ClTagInt, 3); }
+
+void OnDeleteClick;
+var
+  CustId: Integer;
+{
+  CustId = TclProButton(AnaForm.ClSender).ClTagInt;
+  try
+    Clomosy.DBSQLiteQuery.Sql.Text = 'DELETE FROM customers WHERE id = ' + IntToStr(CustId);
+    Clomosy.DBSQLiteQuery.OpenOrExecute;
+
+    ListeleMusteriler;
+  except
+    ShowMessage('Silme Hatası: ' + LastExceptionMessage);
+  }
+}
+
+void UpdateModalStateUI;
+{
+  BtnMState0.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F8FAFC');
+  BtnMState0.clProSettings.BorderColor = clAlphaColor.clHexToColor('#CBD5E1');
+  BtnMState0.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  BtnMState0.SetclProSettings(BtnMState0.clProSettings);
+
+  BtnMState1.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F8FAFC');
+  BtnMState1.clProSettings.BorderColor = clAlphaColor.clHexToColor('#CBD5E1');
+  BtnMState1.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  BtnMState1.SetclProSettings(BtnMState1.clProSettings);
+
+  BtnMState2.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F8FAFC');
+  BtnMState2.clProSettings.BorderColor = clAlphaColor.clHexToColor('#CBD5E1');
+  BtnMState2.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  BtnMState2.SetclProSettings(BtnMState2.clProSettings);
+
+  BtnMState3.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F8FAFC');
+  BtnMState3.clProSettings.BorderColor = clAlphaColor.clHexToColor('#CBD5E1');
+  BtnMState3.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  BtnMState3.SetclProSettings(BtnMState3.clProSettings);
+
+  if (SelectedNewState == 0)
+  {
+    BtnMState0.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FEF3C7');
+    BtnMState0.clProSettings.BorderColor = clAlphaColor.clHexToColor('#D97706');
+    BtnMState0.clProSettings.FontColor = clAlphaColor.clHexToColor('#D97706');
+    BtnMState0.SetclProSettings(BtnMState0.clProSettings);
+  }
+  else if (SelectedNewState == 1)
+  {
+    BtnMState1.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#E0F2FE');
+    BtnMState1.clProSettings.BorderColor = clAlphaColor.clHexToColor('#0284C7');
+    BtnMState1.clProSettings.FontColor = clAlphaColor.clHexToColor('#0284C7');
+    BtnMState1.SetclProSettings(BtnMState1.clProSettings);
+  }
+  else if (SelectedNewState == 2)
+  {
+    BtnMState2.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F3E8FF');
+    BtnMState2.clProSettings.BorderColor = clAlphaColor.clHexToColor('#7C3AED');
+    BtnMState2.clProSettings.FontColor = clAlphaColor.clHexToColor('#7C3AED');
+    BtnMState2.SetclProSettings(BtnMState2.clProSettings);
+  }
+  else if (SelectedNewState == 3)
+  {
+    BtnMState3.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#D1FAE5');
+    BtnMState3.clProSettings.BorderColor = clAlphaColor.clHexToColor('#059669');
+    BtnMState3.clProSettings.FontColor = clAlphaColor.clHexToColor('#059669');
+    BtnMState3.SetclProSettings(BtnMState3.clProSettings);
+  }
+}
+
+void OnMState0Click; { SelectedNewState = 0; UpdateModalStateUI; }
+void OnMState1Click; { SelectedNewState = 1; UpdateModalStateUI; }
+void OnMState2Click; { SelectedNewState = 2; UpdateModalStateUI; }
+void OnMState3Click; { SelectedNewState = 3; UpdateModalStateUI; }
+
+void OpenModal;
+{
+  EdtNewName.Text = '';
+  EdtNewCompany.Text = '';
+  EdtNewPhone.Text = '';
+  EdtNewEmail.Text = '';
+  EdtNewIndustry.Text = '';
+  EdtNewValue.Text = '';
+  SelectedNewState = 0;
+  UpdateModalStateUI;
+
+  PnlMainPage.HitTest = False;
+  PnlModalOverlay.Visible = True;
+  PnlModalOverlay.BringToFront;
+}
+
+void CloseModal;
+{
+  PnlModalOverlay.Visible = False;
+  PnlMainPage.HitTest = True;
+}
+
+void OnOverlayClick;
+{
+  CloseModal;
+}
+
+void SaveNewCustomer;
+var
+  AName, AComp, APhone, AEmail, AInd, AValStr: String;
+  AVal: Double;
+{
+  AName = Trim(EdtNewName.Text);
+  AComp = Trim(EdtNewCompany.Text);
+  APhone = Trim(EdtNewPhone.Text);
+  AEmail = Trim(EdtNewEmail.Text);
+  AInd = Trim(EdtNewIndustry.Text);
+  AValStr = Trim(EdtNewValue.Text);
+
+  if (AName == '')
+  {
+    ShowMessage('Lütfen müşteri adını giriniz!');
+    Exit;
+  }
+
+  if (AComp == '')
+  {
+    ShowMessage('Lütfen şirket adını giriniz!');
+    Exit;
+  }
+
+  if (AInd == '')
+  {
+    AInd = 'Teknoloji';
+  }
+
+  AVal = 0;
+  if (AValStr <> '')
+  {
+    try
+      AVal = StrToFloat(AValStr);
+    except
+      AVal = 0;
+    }
+  }
+
+  try
+    Clomosy.DBSQLiteQuery.Sql.Text = 'INSERT INTO customers (name, company, phone, email, industry, value, state, created_at) VALUES (' +
+                                     QuotedStr(AName) + ', ' +
+                                     QuotedStr(AComp) + ', ' +
+                                     QuotedStr(APhone) + ', ' +
+                                     QuotedStr(AEmail) + ', ' +
+                                     QuotedStr(AInd) + ', ' +
+                                     FloatToStr(AVal) + ', ' +
+                                     IntToStr(SelectedNewState) + ', ''2026-08-19'');';
+    Clomosy.DBSQLiteQuery.OpenOrExecute;
+
+    CloseModal;
+    ListeleMusteriler;
+    GuncelleIstatistik;
+  except
+    ShowMessage('Kayıt Hatası: ' + LastExceptionMessage);
+  }
+}
+
+void OnSearchChange;
+{
+  SearchKeyword = Trim(EdtSearch.Text);
+  ListeleMusteriler;
+}
+
+void OnSearchHeaderChange;
+{
+  SearchKeyword = Trim(EdtSearchHeader.Text);
+  EdtSearch.Text = SearchKeyword;
+  ListeleMusteriler;
+}
+
+void TabGecisleri(Secim: Integer);
+{
+  BtnTabAll.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+  BtnTabFirsat.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+  BtnTabTeklif.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+  BtnTabMusteri.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+  BtnTabGorevler.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+  BtnTabAnalizler.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+
+  BtnTabAll.clProSettings.BorderColor = clAlphaColor.clHexToColor('#FFFFFF');
+  BtnTabFirsat.clProSettings.BorderColor = clAlphaColor.clHexToColor('#FFFFFF');
+  BtnTabTeklif.clProSettings.BorderColor = clAlphaColor.clHexToColor('#FFFFFF');
+  BtnTabMusteri.clProSettings.BorderColor = clAlphaColor.clHexToColor('#FFFFFF');
+  BtnTabGorevler.clProSettings.BorderColor = clAlphaColor.clHexToColor('#FFFFFF');
+  BtnTabAnalizler.clProSettings.BorderColor = clAlphaColor.clHexToColor('#FFFFFF');
+
+  if (Secim == 0)
+  {
+    BtnTabAll.clProSettings.FontColor = clAlphaColor.clHexToColor('#2563EB');
+    BtnTabAll.clProSettings.BorderColor = clAlphaColor.clHexToColor('#2563EB');
+    
+    PnlDashboardView.Visible = True;
+    PnlListView.Visible = False;
+    
+    GuncelleIstatistik;
+  }
+  else if (Secim == 1)
+  {
+    BtnTabFirsat.clProSettings.FontColor = clAlphaColor.clHexToColor('#2563EB');
+    BtnTabFirsat.clProSettings.BorderColor = clAlphaColor.clHexToColor('#2563EB');
+    
+    PnlDashboardView.Visible = False;
+    PnlListView.Visible = True;
+    
+    ActiveFilter = 1;
+    
+    BtnFAll.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F1F5F9');
+    BtnFAll.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+    BtnFFirsat.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#2563EB');
+    BtnFFirsat.clProSettings.FontColor = clAlphaColor.clWhite;
+    BtnFTeklif.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F1F5F9');
+    BtnFTeklif.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+    BtnFKazanilan.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F1F5F9');
+    BtnFKazanilan.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+    
+    BtnFAll.SetclProSettings(BtnFAll.clProSettings);
+    BtnFFirsat.SetclProSettings(BtnFFirsat.clProSettings);
+    BtnFTeklif.SetclProSettings(BtnFTeklif.clProSettings);
+    BtnFKazanilan.SetclProSettings(BtnFKazanilan.clProSettings);
+    
+    ListeleMusteriler;
+  }
+  else if (Secim == 2)
+  {
+    BtnTabTeklif.clProSettings.FontColor = clAlphaColor.clHexToColor('#2563EB');
+    BtnTabTeklif.clProSettings.BorderColor = clAlphaColor.clHexToColor('#2563EB');
+    
+    PnlDashboardView.Visible = False;
+    PnlListView.Visible = True;
+    
+    ActiveFilter = 2;
+    
+    BtnFAll.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F1F5F9');
+    BtnFAll.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+    BtnFFirsat.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F1F5F9');
+    BtnFFirsat.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+    BtnFTeklif.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#2563EB');
+    BtnFTeklif.clProSettings.FontColor = clAlphaColor.clWhite;
+    BtnFKazanilan.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F1F5F9');
+    BtnFKazanilan.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+
+    BtnFAll.SetclProSettings(BtnFAll.clProSettings);
+    BtnFFirsat.SetclProSettings(BtnFFirsat.clProSettings);
+    BtnFTeklif.SetclProSettings(BtnFTeklif.clProSettings);
+    BtnFKazanilan.SetclProSettings(BtnFKazanilan.clProSettings);
+
+    ListeleMusteriler;
+  }
+  else if (Secim == 3)
+  {
+    BtnTabMusteri.clProSettings.FontColor = clAlphaColor.clHexToColor('#2563EB');
+    BtnTabMusteri.clProSettings.BorderColor = clAlphaColor.clHexToColor('#2563EB');
+    
+    PnlDashboardView.Visible = False;
+    PnlListView.Visible = True;
+    
+    ActiveFilter = 0;
+    
+    BtnFAll.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#2563EB');
+    BtnFAll.clProSettings.FontColor = clAlphaColor.clWhite;
+    BtnFFirsat.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F1F5F9');
+    BtnFFirsat.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+    BtnFTeklif.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F1F5F9');
+    BtnFTeklif.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+    BtnFKazanilan.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F1F5F9');
+    BtnFKazanilan.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+
+    BtnFAll.SetclProSettings(BtnFAll.clProSettings);
+    BtnFFirsat.SetclProSettings(BtnFFirsat.clProSettings);
+    BtnFTeklif.SetclProSettings(BtnFTeklif.clProSettings);
+    BtnFKazanilan.SetclProSettings(BtnFKazanilan.clProSettings);
+
+    ListeleMusteriler;
+  }
+  else if (Secim == 4)
+  {
+    ShowMessage('Görevler & Takvim modülü yakında hizmete açılacaktır.');
+    TabGecisleri(0);
+    Exit;
+  }
+  else if (Secim == 5)
+  {
+    ShowMessage('Analizler modülü yakında hizmete açılacaktır.');
+    TabGecisleri(0);
+    Exit;
+  }
+
+  BtnTabAll.SetclProSettings(BtnTabAll.clProSettings);
+  BtnTabFirsat.SetclProSettings(BtnTabFirsat.clProSettings);
+  BtnTabTeklif.SetclProSettings(BtnTabTeklif.clProSettings);
+  BtnTabMusteri.SetclProSettings(BtnTabMusteri.clProSettings);
+  BtnTabGorevler.SetclProSettings(BtnTabGorevler.clProSettings);
+  BtnTabAnalizler.SetclProSettings(BtnTabAnalizler.clProSettings);
+}
+
+void OnTabAllClick; { TabGecisleri(0); }
+void OnTabFirsatClick; { TabGecisleri(1); }
+void OnTabTeklifClick; { TabGecisleri(2); }
+void OnTabMusteriClick; { TabGecisleri(3); }
+void OnTabGorevlerClick; { TabGecisleri(4); }
+void OnTabAnalizlerClick; { TabGecisleri(5); }
+
+void UpdateFilterUI(ActiveBtn: TclProButton);
+{
+  BtnFAll.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F1F5F9');
+  BtnFAll.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  BtnFAll.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+  BtnFAll.SetclProSettings(BtnFAll.clProSettings);
+
+  BtnFFirsat.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F1F5F9');
+  BtnFFirsat.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  BtnFFirsat.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+  BtnFFirsat.SetclProSettings(BtnFFirsat.clProSettings);
+
+  BtnFTeklif.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F1F5F9');
+  BtnFTeklif.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  BtnFTeklif.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+  BtnFTeklif.SetclProSettings(BtnFTeklif.clProSettings);
+
+  BtnFKazanilan.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F1F5F9');
+  BtnFKazanilan.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  BtnFKazanilan.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+  BtnFKazanilan.SetclProSettings(BtnFKazanilan.clProSettings);
+
+  ActiveBtn.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#2563EB');
+  ActiveBtn.clProSettings.BorderColor = clAlphaColor.clHexToColor('#2563EB');
+  ActiveBtn.clProSettings.FontColor = clAlphaColor.clWhite;
+  ActiveBtn.SetclProSettings(ActiveBtn.clProSettings);
+}
+
+void FiltreHepsi; { ActiveFilter = 0; UpdateFilterUI(BtnFAll); ListeleMusteriler; }
+void FiltreFirsat; { ActiveFilter = 1; UpdateFilterUI(BtnFFirsat); ListeleMusteriler; }
+void FiltreTeklif; { ActiveFilter = 2; UpdateFilterUI(BtnFTeklif); ListeleMusteriler; }
+void FiltreKazanilan; { ActiveFilter = 3; UpdateFilterUI(BtnFKazanilan); ListeleMusteriler; }
+
+void SetKpiCardStyle(APanel: TclProPanel);
+{
+  APanel.Align = alLeft;
+  APanel.Width = 195;
+  APanel.Height = 110;
+  APanel.Margins.Right = 10;
+  APanel.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  APanel.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  APanel.clProSettings.BorderWidth = 1;
+  APanel.clProSettings.IsRound = True;
+  APanel.clProSettings.RoundHeight = 12;
+  APanel.clProSettings.RoundWidth = 12;
+  APanel.clProSettings.IsFill = True;
+  APanel.SetclProSettings(APanel.clProSettings);
+}
+
+void SetKpiLabelStyles(ALblTitle: TclProLabel; ALblVal: TclProLabel; ALblSub: TclProLabel; ATitleText, AValText, ASubText: String);
+{
+  ALblTitle.Align = alTop;
+  ALblTitle.Height = 16;
+  ALblTitle.Margins.Left = 12;
+  ALblTitle.Margins.Top = 10;
+  ALblTitle.Text = ATitleText;
+  ALblTitle.clProSettings.FontSize = 9;
+  ALblTitle.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  ALblTitle.clProSettings.TextSettings.Font.Style = [fsBold];
+  ALblTitle.SetclProSettings(ALblTitle.clProSettings);
+
+  ALblVal.Align = alTop;
+  ALblVal.Height = 28;
+  ALblVal.Margins.Left = 12;
+  ALblVal.Margins.Top = 4;
+  ALblVal.Text = AValText;
+  ALblVal.clProSettings.FontSize = 16;
+  ALblVal.clProSettings.FontColor = clAlphaColor.clHexToColor('#0F172A');
+  ALblVal.clProSettings.TextSettings.Font.Style = [fsBold];
+  ALblVal.SetclProSettings(ALblVal.clProSettings);
+
+  ALblSub.Align = alBottom;
+  ALblSub.Height = 20;
+  ALblSub.Margins.Left = 12;
+  ALblSub.Margins.Bottom = 10;
+  ALblSub.Text = ASubText;
+  ALblSub.clProSettings.FontSize = 9;
+  ALblSub.clProSettings.FontColor = clAlphaColor.clHexToColor('#94A3B8');
+  ALblSub.SetclProSettings(ALblSub.clProSettings);
+}
+
+void SetKpiIconStyle(APanelBg: TclProPanel; ALblIcon: TclProLabel; AColorHex, AIconStr: String);
+{
+  APanelBg.Align = alTop;
+  APanelBg.Width = 32;
+  APanelBg.Height = 32;
+  APanelBg.Margins.Top = 10;
+  APanelBg.Margins.Right = 12;
+  APanelBg.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(AColorHex);
+  APanelBg.clProSettings.IsRound = True;
+  APanelBg.clProSettings.RoundHeight = 16;
+  APanelBg.clProSettings.RoundWidth = 16;
+  APanelBg.clProSettings.IsFill = True;
+  APanelBg.SetclProSettings(APanelBg.clProSettings);
+
+  ALblIcon.Align = alClient;
+  ALblIcon.Text = AIconStr;
+  ALblIcon.clProSettings.FontSize = 11;
+  ALblIcon.clProSettings.FontHorzAlign = palCenter;
+  ALblIcon.clProSettings.FontVertAlign = palCenter;
+  ALblIcon.clProSettings.TextSettings.Font.Style = [fsBold];
+  ALblIcon.SetclProSettings(ALblIcon.clProSettings);
+}
+
+void ResponsiveDuzenle;
+var
+  W: Single;
+{
+  W = AnaForm.clWidth;
+  if (W <= 0) Exit;
+
+  if (W < 500)
+  {
+    PnlSearchHeader.Visible = False;
+    LblProfileName.Visible = False;
+    PnlProfile.Width = 74;
+    PnlHeaderTexts.Width = 90;
+    
+    PnlModalDialog.Width = W - 28;
+    PnlModalDialog.Height = 480;
+  }
+  else
+  {
+    PnlSearchHeader.Visible = True;
+    LblProfileName.Visible = True;
+    PnlProfile.Width = 170;
+    PnlHeaderTexts.Width = 140;
+    
+    PnlModalDialog.Width = 340;
+    PnlModalDialog.Height = 500;
+  }
+
+  PnlCol1.Width = (W - 56) / 6;
+  PnlCol2.Width = (W - 56) / 6;
+  PnlCol3.Width = (W - 56) / 6;
+  PnlCol4.Width = (W - 56) / 6;
+  PnlCol5.Width = (W - 56) / 6;
+  PnlCol6.Width = (W - 56) / 6;
+}
+
+void OnFormResize;
+{
+  ResponsiveDuzenle;
+}
+
+{
+  RenderSurum = 0;
+  ActSurum = 0;
+  ActiveFilter = 0;
+  SelectedNewState = 0;
+  SearchKeyword = '';
+
+  AnaForm = TclForm.Create(Self);
+  AnaForm.clSetCaption('Clomosy App');
+  AnaForm.SetFormColor('#F8FAFC', '#F8FAFC', clGNone);
+
+  try
+    AnaForm.LytTopBar.Visible = False;
+    AnaForm.FormWaiting.Visible = False;
+    AnaForm.BtnFormMenu.Visible = False;
+    AnaForm.BtnGoBack.Visible = False;
+  except
+  }
+
+  VeritabaniHazirla;
+
+  // --- ANA FORM GÖVDESİ ---
+  PnlMainPage = AnaForm.AddNewProPanel(AnaForm, 'PnlMainPage');
+  PnlMainPage.Align = alClient;
+  PnlMainPage.clProSettings.IsFill = False;
+  PnlMainPage.SetclProSettings(PnlMainPage.clProSettings);
+
+  // 1. Üst Başlık Barı
+  PnlHeader = AnaForm.AddNewProPanel(PnlMainPage, 'PnlHeader');
+  PnlHeader.Align = alTop;
+  PnlHeader.Height = 56;
+  PnlHeader.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  PnlHeader.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  PnlHeader.clProSettings.BorderWidth = 1;
+  PnlHeader.clProSettings.IsFill = True;
+  PnlHeader.SetclProSettings(PnlHeader.clProSettings);
+
+  PnlLogo = AnaForm.AddNewProPanel(PnlHeader, 'PnlLogo');
+  PnlLogo.Align = alLeft;
+  PnlLogo.Width = 36;
+  PnlLogo.Height = 36;
+  PnlLogo.Margins.Left = 12;
+  PnlLogo.Margins.Top = 10;
+  PnlLogo.Margins.Bottom = 10;
+  PnlLogo.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#2563EB');
+  PnlLogo.clProSettings.IsRound = True;
+  PnlLogo.clProSettings.RoundHeight = 8;
+  PnlLogo.clProSettings.RoundWidth = 8;
+  PnlLogo.clProSettings.IsFill = True;
+  PnlLogo.SetclProSettings(PnlLogo.clProSettings);
+
+  LblLogo = AnaForm.AddNewProLabel(PnlLogo, 'LblLogo', '📈');
+  LblLogo.Align = alClient;
+  LblLogo.clProSettings.FontSize = 14;
+  LblLogo.clProSettings.FontHorzAlign = palCenter;
+  LblLogo.clProSettings.FontVertAlign = palCenter;
+  LblLogo.SetclProSettings(LblLogo.clProSettings);
+
+  PnlHeaderTexts = AnaForm.AddNewProPanel(PnlHeader, 'PnlHeaderTexts');
+  PnlHeaderTexts.Align = alLeft;
+  PnlHeaderTexts.Width = 140;
+  PnlHeaderTexts.Margins.Left = 8;
+  PnlHeaderTexts.clProSettings.IsFill = False;
+  PnlHeaderTexts.SetclProSettings(PnlHeaderTexts.clProSettings);
+
+  LblBrandTitle = AnaForm.AddNewProLabel(PnlHeaderTexts, 'LblBrandTitle', 'Clomosy App');
+  LblBrandTitle.Align = alTop;
+  LblBrandTitle.Height = 22;
+  LblBrandTitle.Margins.Top = 8;
+  LblBrandTitle.clProSettings.FontSize = 14;
+  LblBrandTitle.clProSettings.FontColor = clAlphaColor.clHexToColor('#2563EB');
+  LblBrandTitle.clProSettings.TextSettings.Font.Style = [fsBold];
+  LblBrandTitle.SetclProSettings(LblBrandTitle.clProSettings);
+
+  LblBrandSub = AnaForm.AddNewProLabel(PnlHeaderTexts, 'LblBrandSub', 'Kurumsal CRM Portalı');
+  LblBrandSub.Align = alTop;
+  LblBrandSub.Height = 16;
+  LblBrandSub.clProSettings.FontSize = 8;
+  LblBrandSub.clProSettings.FontColor = clAlphaColor.clHexToColor('#94A3B8');
+  LblBrandSub.SetclProSettings(LblBrandSub.clProSettings);
+
+  PnlProfile = AnaForm.AddNewProPanel(PnlHeader, 'PnlProfile');
+  PnlProfile.Align = alRight;
+  PnlProfile.Width = 170;
+  PnlProfile.clProSettings.IsFill = False;
+  PnlProfile.SetclProSettings(PnlProfile.clProSettings);
+
+  BtnProfilePic = AnaForm.AddNewProButton(PnlProfile, 'BtnProfilePic', '👤');
+  BtnProfilePic.Align = alRight;
+  BtnProfilePic.Width = 32;
+  BtnProfilePic.Height = 32;
+  BtnProfilePic.Margins.Right = 10;
+  BtnProfilePic.Margins.Top = 12;
+  BtnProfilePic.Margins.Bottom = 12;
+  BtnProfilePic.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F1F5F9');
+  BtnProfilePic.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  BtnProfilePic.clProSettings.FontSize = 11;
+  BtnProfilePic.clProSettings.IsRound = True;
+  BtnProfilePic.clProSettings.RoundHeight = 16;
+  BtnProfilePic.clProSettings.RoundWidth = 16;
+  BtnProfilePic.clProSettings.IsFill = True;
+  BtnProfilePic.SetclProSettings(BtnProfilePic.clProSettings);
+
+  LblProfileName = AnaForm.AddNewProLabel(PnlProfile, 'LblProfileName', 'Ahmet Yılmaz');
+  LblProfileName.Align = alRight;
+  LblProfileName.Width = 80;
+  LblProfileName.Margins.Right = 4;
+  LblProfileName.clProSettings.FontSize = 10;
+  LblProfileName.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E293B');
+  LblProfileName.clProSettings.TextSettings.Font.Style = [fsBold];
+  LblProfileName.clProSettings.FontVertAlign = palCenter;
+  LblProfileName.SetclProSettings(LblProfileName.clProSettings);
+
+  BtnBell = AnaForm.AddNewProButton(PnlProfile, 'BtnBell', '🔔');
+  BtnBell.Align = alRight;
+  BtnBell.Width = 28;
+  BtnBell.Height = 28;
+  BtnBell.Margins.Right = 4;
+  BtnBell.Margins.Top = 14;
+  BtnBell.Margins.Bottom = 14;
+  BtnBell.clProSettings.IsFill = False;
+  BtnBell.SetclProSettings(BtnBell.clProSettings);
+
+  BtnQuickAdd = AnaForm.AddNewProButton(PnlHeader, 'BtnQuickAdd', '+ Ekle');
+  BtnQuickAdd.Align = alRight;
+  BtnQuickAdd.Width = 65;
+  BtnQuickAdd.Height = 32;
+  BtnQuickAdd.Margins.Right = 8;
+  BtnQuickAdd.Margins.Top = 12;
+  BtnQuickAdd.Margins.Bottom = 12;
+  BtnQuickAdd.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#2563EB');
+  BtnQuickAdd.clProSettings.FontColor = clAlphaColor.clWhite;
+  BtnQuickAdd.clProSettings.FontSize = 10;
+  BtnQuickAdd.clProSettings.TextSettings.Font.Style = [fsBold];
+  BtnQuickAdd.clProSettings.IsRound = True;
+  BtnQuickAdd.clProSettings.RoundHeight = 8;
+  BtnQuickAdd.clProSettings.RoundWidth = 8;
+  BtnQuickAdd.clProSettings.IsFill = True;
+  BtnQuickAdd.SetclProSettings(BtnQuickAdd.clProSettings);
+  AnaForm.AddNewEvent(BtnQuickAdd, tbeOnClick, 'OpenModal');
+
+  PnlSearchHeader = AnaForm.AddNewProPanel(PnlHeader, 'PnlSearchHeader');
+  PnlSearchHeader.Align = alClient;
+  PnlSearchHeader.Height = 32;
+  PnlSearchHeader.Margins.Left = 8;
+  PnlSearchHeader.Margins.Right = 8;
+  PnlSearchHeader.Margins.Top = 12;
+  PnlSearchHeader.Margins.Bottom = 12;
+  PnlSearchHeader.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F8FAFC');
+  PnlSearchHeader.clProSettings.BorderColor = clAlphaColor.clHexToColor('#CBD5E1');
+  PnlSearchHeader.clProSettings.BorderWidth = 1;
+  PnlSearchHeader.clProSettings.IsRound = True;
+  PnlSearchHeader.clProSettings.RoundHeight = 8;
+  PnlSearchHeader.clProSettings.RoundWidth = 8;
+  PnlSearchHeader.clProSettings.IsFill = True;
+  PnlSearchHeader.SetclProSettings(PnlSearchHeader.clProSettings);
+
+  EdtSearchHeader = AnaForm.AddNewProEdit(PnlSearchHeader, 'EdtSearchHeader', 'Arama yapın...');
+  EdtSearchHeader.Align = alClient;
+  EdtSearchHeader.Margins.Left = 8;
+  EdtSearchHeader.Margins.Right = 8;
+  EdtSearchHeader.clProSettings.FontSize = 10;
+  EdtSearchHeader.clProSettings.FontColor = clAlphaColor.clHexToColor('#0F172A');
+  EdtSearchHeader.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F8FAFC');
+  EdtSearchHeader.clProSettings.BorderWidth = 0;
+  EdtSearchHeader.clProSettings.IsFill = True;
+  EdtSearchHeader.SetclProSettings(EdtSearchHeader.clProSettings);
+  AnaForm.AddNewEvent(EdtSearchHeader, tbeOnChange, 'OnSearchHeaderChange');
+
+  // 2. Üst Sekme Çubuğu
+  PnlTabsRow = AnaForm.AddNewProPanel(PnlMainPage, 'PnlTabsRow');
+  PnlTabsRow.Align = alTop;
+  PnlTabsRow.Height = 44;
+  PnlTabsRow.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  PnlTabsRow.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  PnlTabsRow.clProSettings.BorderWidth = 1;
+  PnlTabsRow.clProSettings.IsFill = True;
+  PnlTabsRow.SetclProSettings(PnlTabsRow.clProSettings);
+
+  SbTabsHorz = AnaForm.AddNewHorzScrollBox(PnlTabsRow, 'SbTabsHorz');
+  SbTabsHorz.Align = alClient;
+
+  BtnTabAll = AnaForm.AddNewProButton(SbTabsHorz, 'BtnTabAll', '❖ Genel Bakış');
+  BtnTabAll.Align = alLeft;
+  BtnTabAll.Width = 100;
+  BtnTabAll.clProSettings.FontColor = clAlphaColor.clHexToColor('#2563EB');
+  BtnTabAll.clProSettings.FontSize = 9;
+  BtnTabAll.clProSettings.TextSettings.Font.Style = [fsBold];
+  BtnTabAll.clProSettings.BorderColor = clAlphaColor.clHexToColor('#2563EB');
+  BtnTabAll.clProSettings.BorderWidth = 1;
+  BtnTabAll.clProSettings.IsRound = True;
+  BtnTabAll.clProSettings.RoundHeight = 4;
+  BtnTabAll.clProSettings.RoundWidth = 4;
+  BtnTabAll.clProSettings.IsFill = True;
+  BtnTabAll.SetclProSettings(BtnTabAll.clProSettings);
+  AnaForm.AddNewEvent(BtnTabAll, tbeOnClick, 'OnTabAllClick');
+
+  BtnTabFirsat = AnaForm.AddNewProButton(SbTabsHorz, 'BtnTabFirsat', '💼 Fırsatlar 0');
+  BtnTabFirsat.Align = alLeft;
+  BtnTabFirsat.Width = 110;
+  BtnTabFirsat.Margins.Left = 6;
+  BtnTabFirsat.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+  BtnTabFirsat.clProSettings.FontSize = 9;
+  BtnTabFirsat.clProSettings.TextSettings.Font.Style = [fsBold];
+  BtnTabFirsat.clProSettings.IsFill = False;
+  BtnTabFirsat.SetclProSettings(BtnTabFirsat.clProSettings);
+  AnaForm.AddNewEvent(BtnTabFirsat, tbeOnClick, 'OnTabFirsatClick');
+
+  BtnTabTeklif = AnaForm.AddNewProButton(SbTabsHorz, 'BtnTabTeklif', '📄 Teklifler 0');
+  BtnTabTeklif.Align = alLeft;
+  BtnTabTeklif.Width = 110;
+  BtnTabTeklif.Margins.Left = 6;
+  BtnTabTeklif.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+  BtnTabTeklif.clProSettings.FontSize = 9;
+  BtnTabTeklif.clProSettings.TextSettings.Font.Style = [fsBold];
+  BtnTabTeklif.clProSettings.IsFill = False;
+  BtnTabTeklif.SetclProSettings(BtnTabTeklif.clProSettings);
+  AnaForm.AddNewEvent(BtnTabTeklif, tbeOnClick, 'OnTabTeklifClick');
+
+  BtnTabMusteri = AnaForm.AddNewProButton(SbTabsHorz, 'BtnTabMusteri', '👥 Müşteriler 0');
+  BtnTabMusteri.Align = alLeft;
+  BtnTabMusteri.Width = 110;
+  BtnTabMusteri.Margins.Left = 6;
+  BtnTabMusteri.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+  BtnTabMusteri.clProSettings.FontSize = 9;
+  BtnTabMusteri.clProSettings.TextSettings.Font.Style = [fsBold];
+  BtnTabMusteri.clProSettings.IsFill = False;
+  BtnTabMusteri.SetclProSettings(BtnTabMusteri.clProSettings);
+  AnaForm.AddNewEvent(BtnTabMusteri, tbeOnClick, 'OnTabMusteriClick');
+
+  BtnTabGorevler = AnaForm.AddNewProButton(SbTabsHorz, 'BtnTabGorevler', '☰ Görevler');
+  BtnTabGorevler.Align = alLeft;
+  BtnTabGorevler.Width = 90;
+  BtnTabGorevler.Margins.Left = 6;
+  BtnTabGorevler.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+  BtnTabGorevler.clProSettings.FontSize = 9;
+  BtnTabGorevler.clProSettings.TextSettings.Font.Style = [fsBold];
+  BtnTabGorevler.clProSettings.IsFill = False;
+  BtnTabGorevler.SetclProSettings(BtnTabGorevler.clProSettings);
+  AnaForm.AddNewEvent(BtnTabGorevler, tbeOnClick, 'OnTabGorevlerClick');
+
+  BtnTabAnalizler = AnaForm.AddNewProButton(SbTabsHorz, 'BtnTabAnalizler', '◔ Analizler');
+  BtnTabAnalizler.Align = alLeft;
+  BtnTabAnalizler.Width = 90;
+  BtnTabAnalizler.Margins.Left = 6;
+  BtnTabAnalizler.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+  BtnTabAnalizler.clProSettings.FontSize = 9;
+  BtnTabAnalizler.clProSettings.TextSettings.Font.Style = [fsBold];
+  BtnTabAnalizler.clProSettings.IsFill = False;
+  BtnTabAnalizler.SetclProSettings(BtnTabAnalizler.clProSettings);
+  AnaForm.AddNewEvent(BtnTabAnalizler, tbeOnClick, 'OnTabAnalizlerClick');
+
+  PnlContentContainer = AnaForm.AddNewProPanel(PnlMainPage, 'PnlContentContainer');
+  PnlContentContainer.Align = alClient;
+  PnlContentContainer.clProSettings.IsFill = False;
+  PnlContentContainer.SetclProSettings(PnlContentContainer.clProSettings);
+
+  // --- GENEL BAKIŞ GÖRÜNÜMÜ ---
+  PnlDashboardView = AnaForm.AddNewProPanel(PnlContentContainer, 'PnlDashboardView');
+  PnlDashboardView.Align = alClient;
+  PnlDashboardView.clProSettings.IsFill = False;
+  PnlDashboardView.SetclProSettings(PnlDashboardView.clProSettings);
+
+  SbKpiHorz = AnaForm.AddNewHorzScrollBox(PnlDashboardView, 'SbKpiHorz');
+  SbKpiHorz.Align = alTop;
+  SbKpiHorz.Height = 115;
+  SbKpiHorz.Margins.Left = 14;
+  SbKpiHorz.Margins.Right = 14;
+  SbKpiHorz.Margins.Top = 10;
+
+  // KPI 1
+  PnlKpi1 = AnaForm.AddNewProPanel(SbKpiHorz, 'PnlKpi1');
+  SetKpiCardStyle(PnlKpi1);
+  PnlKpi1Left = AnaForm.AddNewProPanel(PnlKpi1, 'PnlKpi1Left');
+  PnlKpi1Left.Align = alClient;
+  PnlKpi1Left.clProSettings.IsFill = False;
+  PnlKpi1Left.SetclProSettings(PnlKpi1Left.clProSettings);
+  LblKpi1Title = AnaForm.AddNewProLabel(PnlKpi1Left, 'LblKpi1Title', ' ');
+  LblKpi1Val = AnaForm.AddNewProLabel(PnlKpi1Left, 'LblKpi1Val', ' ');
+  LblKpi1Sub = AnaForm.AddNewProLabel(PnlKpi1Left, 'LblKpi1Sub', ' ');
+  SetKpiLabelStyles(LblKpi1Title, LblKpi1Val, LblKpi1Sub, 'TOPLAM GELİR', '₺0', 'Geçen aya göre artış');
+  PnlKpi1Right = AnaForm.AddNewProPanel(PnlKpi1, 'PnlKpi1Right');
+  PnlKpi1Right.Align = alRight;
+  PnlKpi1Right.Width = 65;
+  PnlKpi1Right.clProSettings.IsFill = False;
+  PnlKpi1Right.SetclProSettings(PnlKpi1Right.clProSettings);
+  PnlKpi1IconBg = AnaForm.AddNewProPanel(PnlKpi1Right, 'PnlKpi1IconBg');
+  LblKpi1Icon = AnaForm.AddNewProLabel(PnlKpi1IconBg, 'LblKpi1Icon', ' ');
+  SetKpiIconStyle(PnlKpi1IconBg, LblKpi1Icon, '#E6F4EA', '₺');
+  LblKpi1Trend = AnaForm.AddNewProLabel(PnlKpi1Right, 'LblKpi1Trend', '↑ %14.2');
+  LblKpi1Trend.Align = alBottom;
+  LblKpi1Trend.Height = 22;
+  LblKpi1Trend.Margins.Bottom = 10;
+  LblKpi1Trend.Margins.Right = 10;
+  LblKpi1Trend.clProSettings.FontSize = 10;
+  LblKpi1Trend.clProSettings.FontColor = clAlphaColor.clHexToColor('#10B981');
+  LblKpi1Trend.clProSettings.TextSettings.Font.Style = [fsBold];
+  LblKpi1Trend.SetclProSettings(LblKpi1Trend.clProSettings);
+
+  // KPI 2
+  PnlKpi2 = AnaForm.AddNewProPanel(SbKpiHorz, 'PnlKpi2');
+  SetKpiCardStyle(PnlKpi2);
+  PnlKpi2Left = AnaForm.AddNewProPanel(PnlKpi2, 'PnlKpi2Left');
+  PnlKpi2Left.Align = alClient;
+  PnlKpi2Left.clProSettings.IsFill = False;
+  PnlKpi2Left.SetclProSettings(PnlKpi2Left.clProSettings);
+  LblKpi2Title = AnaForm.AddNewProLabel(PnlKpi2Left, 'LblKpi2Title', ' ');
+  LblKpi2Val = AnaForm.AddNewProLabel(PnlKpi2Left, 'LblKpi2Val', ' ');
+  LblKpi2Sub = AnaForm.AddNewProLabel(PnlKpi2Left, 'LblKpi2Sub', ' ');
+  SetKpiLabelStyles(LblKpi2Title, LblKpi2Val, LblKpi2Sub, 'AKTİF FIRSATLAR', '0 Fırsat', 'Bekleyen potansiyel');
+  PnlKpi2Right = AnaForm.AddNewProPanel(PnlKpi2, 'PnlKpi2Right');
+  PnlKpi2Right.Align = alRight;
+  PnlKpi2Right.Width = 65;
+  PnlKpi2Right.clProSettings.IsFill = False;
+  PnlKpi2Right.SetclProSettings(PnlKpi2Right.clProSettings);
+  PnlKpi2IconBg = AnaForm.AddNewProPanel(PnlKpi2Right, 'PnlKpi2IconBg');
+  LblKpi2Icon = AnaForm.AddNewProLabel(PnlKpi2IconBg, 'LblKpi2Icon', ' ');
+  SetKpiIconStyle(PnlKpi2IconBg, LblKpi2Icon, '#EFF6FF', '💼');
+  LblKpi2Trend = AnaForm.AddNewProLabel(PnlKpi2Right, 'LblKpi2Trend', '₺0');
+  LblKpi2Trend.Align = alBottom;
+  LblKpi2Trend.Height = 22;
+  LblKpi2Trend.Margins.Bottom = 10;
+  LblKpi2Trend.Margins.Right = 10;
+  LblKpi2Trend.clProSettings.FontSize = 9;
+  LblKpi2Trend.clProSettings.FontColor = clAlphaColor.clHexToColor('#2563EB');
+  LblKpi2Trend.clProSettings.TextSettings.Font.Style = [fsBold];
+  LblKpi2Trend.SetclProSettings(LblKpi2Trend.clProSettings);
+
+  // KPI 3
+  PnlKpi3 = AnaForm.AddNewProPanel(SbKpiHorz, 'PnlKpi3');
+  SetKpiCardStyle(PnlKpi3);
+  PnlKpi3Left = AnaForm.AddNewProPanel(PnlKpi3, 'PnlKpi3Left');
+  PnlKpi3Left.Align = alClient;
+  PnlKpi3Left.clProSettings.IsFill = False;
+  PnlKpi3Left.SetclProSettings(PnlKpi3Left.clProSettings);
+  LblKpi3Title = AnaForm.AddNewProLabel(PnlKpi3Left, 'LblKpi3Title', ' ');
+  LblKpi3Val = AnaForm.AddNewProLabel(PnlKpi3Left, 'LblKpi3Val', ' ');
+  LblKpi3Sub = AnaForm.AddNewProLabel(PnlKpi3Left, 'LblKpi3Sub', ' ');
+  SetKpiLabelStyles(LblKpi3Title, LblKpi3Val, LblKpi3Sub, 'BEKLEYEN TEKLİF', '0 Adet', 'Onay bekliyor');
+  PnlKpi3Right = AnaForm.AddNewProPanel(PnlKpi3, 'PnlKpi3Right');
+  PnlKpi3Right.Align = alRight;
+  PnlKpi3Right.Width = 65;
+  PnlKpi3Right.clProSettings.IsFill = False;
+  PnlKpi3Right.SetclProSettings(PnlKpi3Right.clProSettings);
+  PnlKpi3IconBg = AnaForm.AddNewProPanel(PnlKpi3Right, 'PnlKpi3IconBg');
+  LblKpi3Icon = AnaForm.AddNewProLabel(PnlKpi3IconBg, 'LblKpi3Icon', ' ');
+  SetKpiIconStyle(PnlKpi3IconBg, LblKpi3Icon, '#FEF3C7', '🕒');
+  LblKpi3Trend = AnaForm.AddNewProLabel(PnlKpi3Right, 'LblKpi3Trend', 'Ort. 3 Gün');
+  LblKpi3Trend.Align = alBottom;
+  LblKpi3Trend.Height = 22;
+  LblKpi3Trend.Margins.Bottom = 10;
+  LblKpi3Trend.Margins.Right = 10;
+  LblKpi3Trend.clProSettings.FontSize = 8;
+  LblKpi3Trend.clProSettings.FontColor = clAlphaColor.clHexToColor('#D97706');
+  LblKpi3Trend.clProSettings.TextSettings.Font.Style = [fsBold];
+  LblKpi3Trend.SetclProSettings(LblKpi3Trend.clProSettings);
+
+  // KPI 4
+  PnlKpi4 = AnaForm.AddNewProPanel(SbKpiHorz, 'PnlKpi4');
+  SetKpiCardStyle(PnlKpi4);
+  PnlKpi4Left = AnaForm.AddNewProPanel(PnlKpi4, 'PnlKpi4Left');
+  PnlKpi4Left.Align = alClient;
+  PnlKpi4Left.clProSettings.IsFill = False;
+  PnlKpi4Left.SetclProSettings(PnlKpi4Left.clProSettings);
+  LblKpi4Title = AnaForm.AddNewProLabel(PnlKpi4Left, 'LblKpi4Title', ' ');
+  LblKpi4Val = AnaForm.AddNewProLabel(PnlKpi4Left, 'LblKpi4Val', ' ');
+  LblKpi4Sub = AnaForm.AddNewProLabel(PnlKpi4Left, 'LblKpi4Sub', ' ');
+  SetKpiLabelStyles(LblKpi4Title, LblKpi4Val, LblKpi4Sub, 'KAZANMA ORANI', '%0', 'Satış başarısı');
+  PnlKpi4Right = AnaForm.AddNewProPanel(PnlKpi4, 'PnlKpi4Right');
+  PnlKpi4Right.Align = alRight;
+  PnlKpi4Right.Width = 65;
+  PnlKpi4Right.clProSettings.IsFill = False;
+  PnlKpi4Right.SetclProSettings(PnlKpi4Right.clProSettings);
+  PnlKpi4IconBg = AnaForm.AddNewProPanel(PnlKpi4Right, 'PnlKpi4IconBg');
+  LblKpi4Icon = AnaForm.AddNewProLabel(PnlKpi4IconBg, 'LblKpi4Icon', ' ');
+  SetKpiIconStyle(PnlKpi4IconBg, LblKpi4Icon, '#F3E8FF', '🏆');
+  LblKpi4Trend = AnaForm.AddNewProLabel(PnlKpi4Right, 'LblKpi4Trend', '+%4.1');
+  LblKpi4Trend.Align = alBottom;
+  LblKpi4Trend.Height = 22;
+  LblKpi4Trend.Margins.Bottom = 10;
+  LblKpi4Trend.Margins.Right = 10;
+  LblKpi4Trend.clProSettings.FontSize = 10;
+  LblKpi4Trend.clProSettings.FontColor = clAlphaColor.clHexToColor('#7C3AED');
+  LblKpi4Trend.clProSettings.TextSettings.Font.Style = [fsBold];
+  LblKpi4Trend.SetclProSettings(LblKpi4Trend.clProSettings);
+
+  // Grafik & Aktivite Split Taşıyıcı
+  PnlBottomSplit = AnaForm.AddNewProPanel(PnlDashboardView, 'PnlBottomSplit');
+  PnlBottomSplit.Align = alClient;
+  PnlBottomSplit.Margins.Top = 10;
+  PnlBottomSplit.Margins.Left = 14;
+  PnlBottomSplit.Margins.Right = 14;
+  PnlBottomSplit.Margins.Bottom = 10;
+  PnlBottomSplit.clProSettings.IsFill = False;
+  PnlBottomSplit.SetclProSettings(PnlBottomSplit.clProSettings);
+
+  // Satış Çubuk Grafiği Kartı
+  PnlChartCard = AnaForm.AddNewProPanel(PnlBottomSplit, 'PnlChartCard');
+  PnlChartCard.Align = alTop;
+  PnlChartCard.Height = 200;
+  PnlChartCard.Margins.Bottom = 10;
+  PnlChartCard.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  PnlChartCard.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  PnlChartCard.clProSettings.BorderWidth = 1;
+  PnlChartCard.clProSettings.IsRound = True;
+  PnlChartCard.clProSettings.RoundHeight = 12;
+  PnlChartCard.clProSettings.RoundWidth = 12;
+  PnlChartCard.clProSettings.IsFill = True;
+  PnlChartCard.SetclProSettings(PnlChartCard.clProSettings);
+
+  PnlChartHeader = AnaForm.AddNewProPanel(PnlChartCard, 'PnlChartHeader');
+  PnlChartHeader.Align = alTop;
+  PnlChartHeader.Height = 36;
+  PnlChartHeader.clProSettings.IsFill = False;
+  PnlChartHeader.SetclProSettings(PnlChartHeader.clProSettings);
+
+  LblChartTitle = AnaForm.AddNewProLabel(PnlChartHeader, 'LblChartTitle', 'Aylık Satış Performansı');
+  LblChartTitle.Align = alLeft;
+  LblChartTitle.Width = 180;
+  LblChartTitle.Margins.Left = 14;
+  LblChartTitle.Margins.Top = 10;
+  LblChartTitle.clProSettings.FontSize = 11;
+  LblChartTitle.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E293B');
+  LblChartTitle.clProSettings.TextSettings.Font.Style = [fsBold];
+  LblChartTitle.SetclProSettings(LblChartTitle.clProSettings);
+
+  LblChartSub = AnaForm.AddNewProLabel(PnlChartHeader, 'LblChartSub', '2026 Trendi');
+  LblChartSub.Align = alRight;
+  LblChartSub.Width = 80;
+  LblChartSub.Margins.Right = 14;
+  LblChartSub.Margins.Top = 10;
+  LblChartSub.clProSettings.FontSize = 9;
+  LblChartSub.clProSettings.FontColor = clAlphaColor.clHexToColor('#94A3B8');
+  LblChartSub.SetclProSettings(LblChartSub.clProSettings);
+
+  PnlChartBody = AnaForm.AddNewProPanel(PnlChartCard, 'PnlChartBody');
+  PnlChartBody.Align = alClient;
+  PnlChartBody.Margins.Left = 14;
+  PnlChartBody.Margins.Right = 14;
+  PnlChartBody.Margins.Bottom = 8;
+  PnlChartBody.clProSettings.IsFill = False;
+  PnlChartBody.SetclProSettings(PnlChartBody.clProSettings);
+
+  PnlCol1 = AnaForm.AddNewProPanel(PnlChartBody, 'PnlCol1');
+  PnlCol1.Align = alLeft;
+  PnlCol1.clProSettings.IsFill = False;
+  PnlCol1.SetclProSettings(PnlCol1.clProSettings);
+  PnlBar1 = AnaForm.AddNewProPanel(PnlCol1, 'PnlBar1');
+  SetBarStyle(PnlBar1, 55, '#2563EB');
+  LblMon1 = AnaForm.AddNewProLabel(PnlCol1, 'LblMon1', ' ');
+  SetMonthLabelStyle(LblMon1, 'Oca');
+
+  PnlCol2 = AnaForm.AddNewProPanel(PnlChartBody, 'PnlCol2');
+  PnlCol2.Align = alLeft;
+  PnlCol2.clProSettings.IsFill = False;
+  PnlCol2.SetclProSettings(PnlCol2.clProSettings);
+  PnlBar2 = AnaForm.AddNewProPanel(PnlCol2, 'PnlBar2');
+  SetBarStyle(PnlBar2, 90, '#10B981');
+  LblMon2 = AnaForm.AddNewProLabel(PnlCol2, 'LblMon2', ' ');
+  SetMonthLabelStyle(LblMon2, 'Şub');
+
+  PnlCol3 = AnaForm.AddNewProPanel(PnlChartBody, 'PnlCol3');
+  PnlCol3.Align = alLeft;
+  PnlCol3.clProSettings.IsFill = False;
+  PnlCol3.SetclProSettings(PnlCol3.clProSettings);
+  PnlBar3 = AnaForm.AddNewProPanel(PnlCol3, 'PnlBar3');
+  SetBarStyle(PnlBar3, 70, '#2563EB');
+  LblMon3 = AnaForm.AddNewProLabel(PnlCol3, 'LblMon3', ' ');
+  SetMonthLabelStyle(LblMon3, 'Mar');
+
+  PnlCol4 = AnaForm.AddNewProPanel(PnlChartBody, 'PnlCol4');
+  PnlCol4.Align = alLeft;
+  PnlCol4.clProSettings.IsFill = False;
+  PnlCol4.SetclProSettings(PnlCol4.clProSettings);
+  PnlBar4 = AnaForm.AddNewProPanel(PnlCol4, 'PnlBar4');
+  SetBarStyle(PnlBar4, 120, '#10B981');
+  LblMon4 = AnaForm.AddNewProLabel(PnlCol4, 'LblMon4', ' ');
+  SetMonthLabelStyle(LblMon4, 'Nis');
+
+  PnlCol5 = AnaForm.AddNewProPanel(PnlChartBody, 'PnlCol5');
+  PnlCol5.Align = alLeft;
+  PnlCol5.clProSettings.IsFill = False;
+  PnlCol5.SetclProSettings(PnlCol5.clProSettings);
+  PnlBar5 = AnaForm.AddNewProPanel(PnlCol5, 'PnlBar5');
+  SetBarStyle(PnlBar5, 100, '#2563EB');
+  LblMon5 = AnaForm.AddNewProLabel(PnlCol5, 'LblMon5', ' ');
+  SetMonthLabelStyle(LblMon5, 'May');
+
+  PnlCol6 = AnaForm.AddNewProPanel(PnlChartBody, 'PnlCol6');
+  PnlCol6.Align = alLeft;
+  PnlCol6.clProSettings.IsFill = False;
+  PnlCol6.SetclProSettings(PnlCol6.clProSettings);
+  PnlBar6 = AnaForm.AddNewProPanel(PnlCol6, 'PnlBar6');
+  SetBarStyle(PnlBar6, 135, '#10B981');
+  LblMon6 = AnaForm.AddNewProLabel(PnlCol6, 'LblMon6', ' ');
+  SetMonthLabelStyle(LblMon6, 'Haz');
+
+  // Aktivite Listesi Kartı
+  PnlActivityCard = AnaForm.AddNewProPanel(PnlBottomSplit, 'PnlActivityCard');
+  PnlActivityCard.Align = alClient;
+  PnlActivityCard.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  PnlActivityCard.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  PnlActivityCard.clProSettings.BorderWidth = 1;
+  PnlActivityCard.clProSettings.IsRound = True;
+  PnlActivityCard.clProSettings.RoundHeight = 12;
+  PnlActivityCard.clProSettings.RoundWidth = 12;
+  PnlActivityCard.clProSettings.IsFill = True;
+  PnlActivityCard.SetclProSettings(PnlActivityCard.clProSettings);
+
+  PnlActivityHeader = AnaForm.AddNewProPanel(PnlActivityCard, 'PnlActivityHeader');
+  PnlActivityHeader.Align = alTop;
+  PnlActivityHeader.Height = 36;
+  PnlActivityHeader.clProSettings.IsFill = False;
+  PnlActivityHeader.SetclProSettings(PnlActivityHeader.clProSettings);
+
+  LblActivityTitle = AnaForm.AddNewProLabel(PnlActivityHeader, 'LblActivityTitle', 'Son Aktiviteler');
+  LblActivityTitle.Align = alLeft;
+  LblActivityTitle.Width = 200;
+  LblActivityTitle.Margins.Left = 14;
+  LblActivityTitle.Margins.Top = 10;
+  LblActivityTitle.clProSettings.FontSize = 11;
+  LblActivityTitle.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E293B');
+  LblActivityTitle.clProSettings.TextSettings.Font.Style = [fsBold];
+  LblActivityTitle.SetclProSettings(LblActivityTitle.clProSettings);
+
+  SbActivities = AnaForm.AddNewVertScrollBox(PnlActivityCard, 'SbActivities');
+  SbActivities.Align = alClient;
+  SbActivities.Margins.Left = 14;
+  SbActivities.Margins.Right = 14;
+  SbActivities.Margins.Bottom = 8;
+
+  // --- MÜŞTERİ LİSTE GÖRÜNÜMÜ ---
+  PnlListView = AnaForm.AddNewProPanel(PnlContentContainer, 'PnlListView');
+  PnlListView.Align = alClient;
+  PnlListView.clProSettings.IsFill = False;
+  PnlListView.SetclProSettings(PnlListView.clProSettings);
+  PnlListView.Visible = False;
+
+  PnlNavFilter = AnaForm.AddNewProPanel(PnlListView, 'PnlNavFilter');
+  PnlNavFilter.Align = alTop;
+  PnlNavFilter.Height = 82;
+  PnlNavFilter.Margins.Top = 6;
+  PnlNavFilter.Margins.Left = 14;
+  PnlNavFilter.Margins.Right = 14;
+  PnlNavFilter.clProSettings.IsFill = False;
+  PnlNavFilter.SetclProSettings(PnlNavFilter.clProSettings);
+
+  PnlSearch = AnaForm.AddNewProPanel(PnlNavFilter, 'PnlSearch');
+  PnlSearch.Align = alTop;
+  PnlSearch.Height = 36;
+  PnlSearch.clProSettings.IsFill = False;
+  PnlSearch.SetclProSettings(PnlSearch.clProSettings);
+
+  EdtSearch = AnaForm.AddNewProEdit(PnlSearch, 'EdtSearch', 'Müşteri, şirket veya sektör ara...');
+  EdtSearch.Align = alClient;
+  SetEditStyle(EdtSearch);
+  AnaForm.AddNewEvent(EdtSearch, tbeOnChange, 'OnSearchChange');
+
+  PnlFilter = AnaForm.AddNewProPanel(PnlNavFilter, 'PnlFilter');
+  PnlFilter.Align = alBottom;
+  PnlFilter.Height = 38;
+  PnlFilter.clProSettings.IsFill = False;
+  PnlFilter.SetclProSettings(PnlFilter.clProSettings);
+
+  BtnFAll = AnaForm.AddNewProButton(PnlFilter, 'BtnFAll', 'Tümü');
+  BtnFAll.Align = alLeft;
+  BtnFAll.Width = (AnaForm.clWidth - 46) / 4;
+  BtnFAll.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#2563EB');
+  BtnFAll.clProSettings.BorderColor = clAlphaColor.clHexToColor('#2563EB');
+  BtnFAll.clProSettings.BorderWidth = 1;
+  BtnFAll.clProSettings.FontColor = clAlphaColor.clWhite;
+  BtnFAll.clProSettings.FontSize = 11;
+  BtnFAll.clProSettings.TextSettings.Font.Style = [fsBold];
+  BtnFAll.clProSettings.IsRound = True;
+  BtnFAll.clProSettings.RoundHeight = 8;
+  BtnFAll.clProSettings.RoundWidth = 8;
+  BtnFAll.clProSettings.IsFill = True;
+  BtnFAll.SetclProSettings(BtnFAll.clProSettings);
+  AnaForm.AddNewEvent(BtnFAll, tbeOnClick, 'FiltreHepsi');
+
+  BtnFFirsat = AnaForm.AddNewProButton(PnlFilter, 'BtnFFirsat', 'Fırsat');
+  BtnFFirsat.Align = alLeft;
+  BtnFFirsat.Width = (AnaForm.clWidth - 46) / 4;
+  BtnFFirsat.Margins.Left = 6;
+  BtnFFirsat.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F1F5F9');
+  BtnFFirsat.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  BtnFFirsat.clProSettings.BorderWidth = 1;
+  BtnFFirsat.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+  BtnFFirsat.clProSettings.FontSize = 11;
+  BtnFFirsat.clProSettings.TextSettings.Font.Style = [fsBold];
+  BtnFFirsat.clProSettings.IsRound = True;
+  BtnFFirsat.clProSettings.RoundHeight = 8;
+  BtnFFirsat.clProSettings.RoundWidth = 8;
+  BtnFFirsat.clProSettings.IsFill = True;
+  BtnFFirsat.SetclProSettings(BtnFFirsat.clProSettings);
+  AnaForm.AddNewEvent(BtnFFirsat, tbeOnClick, 'FiltreFirsat');
+
+  BtnFTeklif = AnaForm.AddNewProButton(PnlFilter, 'BtnFTeklif', 'Teklif');
+  BtnFTeklif.Align = alLeft;
+  BtnFTeklif.Width = (AnaForm.clWidth - 46) / 4;
+  BtnFTeklif.Margins.Left = 6;
+  BtnFTeklif.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F1F5F9');
+  BtnFTeklif.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  BtnFTeklif.clProSettings.BorderWidth = 1;
+  BtnFTeklif.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+  BtnFTeklif.clProSettings.FontSize = 11;
+  BtnFTeklif.clProSettings.TextSettings.Font.Style = [fsBold];
+  BtnFTeklif.clProSettings.IsRound = True;
+  BtnFTeklif.clProSettings.RoundHeight = 8;
+  BtnFTeklif.clProSettings.RoundWidth = 8;
+  BtnFTeklif.clProSettings.IsFill = True;
+  BtnFTeklif.SetclProSettings(BtnFTeklif.clProSettings);
+  AnaForm.AddNewEvent(BtnFTeklif, tbeOnClick, 'FiltreTeklif');
+
+  BtnFKazanilan = AnaForm.AddNewProButton(PnlFilter, 'BtnFKazanilan', 'Kazan');
+  BtnFKazanilan.Align = alLeft;
+  BtnFKazanilan.Width = (AnaForm.clWidth - 46) / 4;
+  BtnFKazanilan.Margins.Left = 6;
+  BtnFKazanilan.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F1F5F9');
+  BtnFKazanilan.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  BtnFKazanilan.clProSettings.BorderWidth = 1;
+  BtnFKazanilan.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+  BtnFKazanilan.clProSettings.FontSize = 11;
+  BtnFKazanilan.clProSettings.TextSettings.Font.Style = [fsBold];
+  BtnFKazanilan.clProSettings.IsRound = True;
+  BtnFKazanilan.clProSettings.RoundHeight = 8;
+  BtnFKazanilan.clProSettings.RoundWidth = 8;
+  BtnFKazanilan.clProSettings.IsFill = True;
+  BtnFKazanilan.SetclProSettings(BtnFKazanilan.clProSettings);
+  AnaForm.AddNewEvent(BtnFKazanilan, tbeOnClick, 'FiltreKazanilan');
+
+  PnlScrollTasiyici = AnaForm.AddNewProPanel(PnlListView, 'PnlScrollTasiyici');
+  PnlScrollTasiyici.Align = alClient;
+  PnlScrollTasiyici.Margins.Top = 4;
+  PnlScrollTasiyici.Margins.Bottom = 4;
+  PnlScrollTasiyici.clProSettings.IsFill = False;
+  PnlScrollTasiyici.SetclProSettings(PnlScrollTasiyici.clProSettings);
+
+  // --- POP-UP MODAL DİYALOG (OVERLAY) ---
+  PnlModalOverlay = AnaForm.AddNewProPanel(AnaForm, 'PnlModalOverlay');
+  PnlModalOverlay.Align = alContents;
+  PnlModalOverlay.clProSettings.IsTransparent = False;
+  PnlModalOverlay.clProSettings.IsFill = True;
+  PnlModalOverlay.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#0F172A');
+  PnlModalOverlay.SetclProSettings(PnlModalOverlay.clProSettings);
+  PnlModalOverlay.Visible = False;
+  AnaForm.AddNewEvent(PnlModalOverlay, tbeOnClick, 'OnOverlayClick');
+
+  PnlModalDialog = AnaForm.AddNewProPanel(PnlModalOverlay, 'PnlModalDialog');
+  PnlModalDialog.Align = alCenter;
+  PnlModalDialog.Width = 330;
+  PnlModalDialog.Height = 500;
+  PnlModalDialog.clProSettings.IsTransparent = False;
+  PnlModalDialog.clProSettings.IsFill = True;
+  PnlModalDialog.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  PnlModalDialog.clProSettings.BorderColor = clAlphaColor.clHexToColor('#CBD5E1');
+  PnlModalDialog.clProSettings.BorderWidth = 1;
+  PnlModalDialog.clProSettings.IsRound = True;
+  PnlModalDialog.clProSettings.RoundHeight = 18;
+  PnlModalDialog.clProSettings.RoundWidth = 18;
+  PnlModalDialog.SetclProSettings(PnlModalDialog.clProSettings);
+
+  PnlModalHeader = AnaForm.AddNewProPanel(PnlModalDialog, 'PnlModalHeader');
+  PnlModalHeader.Align = alTop;
+  PnlModalHeader.Height = 52;
+  PnlModalHeader.Margins.Left = 16;
+  PnlModalHeader.Margins.Right = 16;
+  PnlModalHeader.Margins.Top = 10;
+  PnlModalHeader.clProSettings.IsFill = False;
+  PnlModalHeader.SetclProSettings(PnlModalHeader.clProSettings);
+
+  BtnCloseModalX = AnaForm.AddNewProButton(PnlModalHeader, 'BtnCloseModalX', '✕');
+  BtnCloseModalX.Align = alRight;
+  BtnCloseModalX.Width = 30;
+  BtnCloseModalX.Height = 30;
+  BtnCloseModalX.Margins.Top = 10;
+  BtnCloseModalX.Margins.Bottom = 10;
+  BtnCloseModalX.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F1F5F9');
+  BtnCloseModalX.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  BtnCloseModalX.clProSettings.FontSize = 12;
+  BtnCloseModalX.clProSettings.TextSettings.Font.Style = [fsBold];
+  BtnCloseModalX.clProSettings.IsRound = True;
+  BtnCloseModalX.clProSettings.RoundHeight = 15;
+  BtnCloseModalX.clProSettings.RoundWidth = 15;
+  BtnCloseModalX.clProSettings.IsFill = True;
+  BtnCloseModalX.SetclProSettings(BtnCloseModalX.clProSettings);
+  AnaForm.AddNewEvent(BtnCloseModalX, tbeOnClick, 'CloseModal');
+
+  LblModalTitle = AnaForm.AddNewProLabel(PnlModalHeader, 'LblModalTitle', 'Yeni Müşteri & Fırsat');
+  LblModalTitle.Align = alTop;
+  LblModalTitle.Height = 22;
+  LblModalTitle.Margins.Top = 4;
+  LblModalTitle.clProSettings.FontSize = 15;
+  LblModalTitle.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E3A8A');
+  LblModalTitle.clProSettings.TextSettings.Font.Style = [fsBold];
+  LblModalTitle.SetclProSettings(LblModalTitle.clProSettings);
+
+  LblModalSub = AnaForm.AddNewProLabel(PnlModalHeader, 'LblModalSub', 'Müşteri bilgilerini giriniz');
+  LblModalSub.Align = alTop;
+  LblModalSub.Height = 16;
+  LblModalSub.clProSettings.FontSize = 10;
+  LblModalSub.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  LblModalSub.SetclProSettings(LblModalSub.clProSettings);
+
+  SbModalScroll = AnaForm.AddNewVertScrollBox(PnlModalDialog, 'SbModalScroll');
+  SbModalScroll.Align = alClient;
+  SbModalScroll.Margins.Left = 16;
+  SbModalScroll.Margins.Right = 16;
+  SbModalScroll.Margins.Top = 4;
+  SbModalScroll.Margins.Bottom = 12;
+
+  EdtNewName = AnaForm.AddNewProEdit(SbModalScroll, 'EdtNewName', 'Müşteri Ad Soyad *');
+  EdtNewName.Align = alTop;
+  EdtNewName.Height = 38;
+  EdtNewName.Margins.Top = 8;
+  SetEditStyle(EdtNewName);
+
+  EdtNewCompany = AnaForm.AddNewProEdit(SbModalScroll, 'EdtNewCompany', 'Şirket / Kurum Adı *');
+  EdtNewCompany.Align = alTop;
+  EdtNewCompany.Height = 38;
+  EdtNewCompany.Margins.Top = 8;
+  SetEditStyle(EdtNewCompany);
+
+  EdtNewEmail = AnaForm.AddNewProEdit(SbModalScroll, 'EdtNewEmail', 'E-posta Adresi *');
+  EdtNewEmail.Align = alTop;
+  EdtNewEmail.Height = 38;
+  EdtNewEmail.Margins.Top = 8;
+  SetEditStyle(EdtNewEmail);
+
+  EdtNewPhone = AnaForm.AddNewProEdit(SbModalScroll, 'EdtNewPhone', 'Telefon Numarası');
+  EdtNewPhone.Align = alTop;
+  EdtNewPhone.Height = 38;
+  EdtNewPhone.Margins.Top = 8;
+  SetEditStyle(EdtNewPhone);
+
+  EdtNewIndustry = AnaForm.AddNewProEdit(SbModalScroll, 'EdtNewIndustry', 'Sektör (Örn: Teknoloji, Finans)');
+  EdtNewIndustry.Align = alTop;
+  EdtNewIndustry.Height = 38;
+  EdtNewIndustry.Margins.Top = 8;
+  SetEditStyle(EdtNewIndustry);
+
+  EdtNewValue = AnaForm.AddNewProEdit(SbModalScroll, 'EdtNewValue', 'Tahmini Fırsat Değeri (₺)');
+  EdtNewValue.Align = alTop;
+  EdtNewValue.Height = 38;
+  EdtNewValue.Margins.Top = 8;
+  SetEditStyle(EdtNewValue);
+
+  LblModalStateTitle = AnaForm.AddNewProLabel(SbModalScroll, 'LblModalStateTitle', 'Başlangıç Aşaması:');
+  LblModalStateTitle.Align = alTop;
+  LblModalStateTitle.Height = 20;
+  LblModalStateTitle.Margins.Top = 10;
+  LblModalStateTitle.clProSettings.FontSize = 10;
+  LblModalStateTitle.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+  LblModalStateTitle.clProSettings.TextSettings.Font.Style = [fsBold];
+  LblModalStateTitle.SetclProSettings(LblModalStateTitle.clProSettings);
+
+  PnlModalStateRow = AnaForm.AddNewProPanel(SbModalScroll, 'PnlModalStateRow');
+  PnlModalStateRow.Align = alTop;
+  PnlModalStateRow.Height = 32;
+  PnlModalStateRow.Margins.Top = 4;
+  PnlModalStateRow.clProSettings.IsFill = False;
+  PnlModalStateRow.SetclProSettings(PnlModalStateRow.clProSettings);
+
+  BtnMState0 = AnaForm.AddNewProButton(PnlModalStateRow, 'BtnMState0', 'Fırsat');
+  BtnMState0.Align = alLeft;
+  BtnMState0.Width = 68;
+  BtnMState0.clProSettings.FontSize = 10;
+  BtnMState0.clProSettings.TextSettings.Font.Style = [fsBold];
+  BtnMState0.clProSettings.IsRound = True;
+  BtnMState0.clProSettings.RoundHeight = 6;
+  BtnMState0.clProSettings.RoundWidth = 6;
+  BtnMState0.clProSettings.IsFill = True;
+  BtnMState0.SetclProSettings(BtnMState0.clProSettings);
+  AnaForm.AddNewEvent(BtnMState0, tbeOnClick, 'OnMState0Click');
+
+  BtnMState1 = AnaForm.AddNewProButton(PnlModalStateRow, 'BtnMState1', 'Görüşme');
+  BtnMState1.Align = alLeft;
+  BtnMState1.Margins.Left = 6;
+  BtnMState1.Width = 70;
+  BtnMState1.clProSettings.FontSize = 10;
+  BtnMState1.clProSettings.TextSettings.Font.Style = [fsBold];
+  BtnMState1.clProSettings.IsRound = True;
+  BtnMState1.clProSettings.RoundHeight = 6;
+  BtnMState1.clProSettings.RoundWidth = 6;
+  BtnMState1.clProSettings.IsFill = True;
+  BtnMState1.SetclProSettings(BtnMState1.clProSettings);
+  AnaForm.AddNewEvent(BtnMState1, tbeOnClick, 'OnMState1Click');
+
+  BtnMState2 = AnaForm.AddNewProButton(PnlModalStateRow, 'BtnMState2', 'Teklif');
+  BtnMState2.Align = alLeft;
+  BtnMState2.Margins.Left = 6;
+  BtnMState2.Width = 68;
+  BtnMState2.clProSettings.FontSize = 10;
+  BtnMState2.clProSettings.TextSettings.Font.Style = [fsBold];
+  BtnMState2.clProSettings.IsRound = True;
+  BtnMState2.clProSettings.RoundHeight = 6;
+  BtnMState2.clProSettings.RoundWidth = 6;
+  BtnMState2.clProSettings.IsFill = True;
+  BtnMState2.SetclProSettings(BtnMState2.clProSettings);
+  AnaForm.AddNewEvent(BtnMState2, tbeOnClick, 'OnMState2Click');
+
+  BtnMState3 = AnaForm.AddNewProButton(PnlModalStateRow, 'BtnMState3', 'Kazan');
+  BtnMState3.Align = alLeft;
+  BtnMState3.Margins.Left = 6;
+  BtnMState3.Width = 68;
+  BtnMState3.clProSettings.FontSize = 10;
+  BtnMState3.clProSettings.TextSettings.Font.Style = [fsBold];
+  BtnMState3.clProSettings.IsRound = True;
+  BtnMState3.clProSettings.RoundHeight = 6;
+  BtnMState3.clProSettings.RoundWidth = 6;
+  BtnMState3.clProSettings.IsFill = True;
+  BtnMState3.SetclProSettings(BtnMState3.clProSettings);
+  AnaForm.AddNewEvent(BtnMState3, tbeOnClick, 'OnMState3Click');
+
+  BtnSaveNew = AnaForm.AddNewProButton(SbModalScroll, 'BtnSaveNew', '✓ Müşteriyi Kaydet');
+  BtnSaveNew.Align = alTop;
+  BtnSaveNew.Height = 42;
+  BtnSaveNew.Margins.Top = 16;
+  BtnSaveNew.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#2563EB');
+  BtnSaveNew.clProSettings.FontColor = clAlphaColor.clWhite;
+  BtnSaveNew.clProSettings.FontSize = 12;
+  BtnSaveNew.clProSettings.TextSettings.Font.Style = [fsBold];
+  BtnSaveNew.clProSettings.IsRound = True;
+  BtnSaveNew.clProSettings.RoundHeight = 8;
+  BtnSaveNew.clProSettings.RoundWidth = 8;
+  BtnSaveNew.clProSettings.IsFill = True;
+  BtnSaveNew.SetclProSettings(BtnSaveNew.clProSettings);
+  AnaForm.AddNewEvent(BtnSaveNew, tbeOnClick, 'SaveNewCustomer');
+
+  BtnCloseModal = AnaForm.AddNewProButton(SbModalScroll, 'BtnCloseModal', 'İptal');
+  BtnCloseModal.Align = alTop;
+  BtnCloseModal.Height = 34;
+  BtnCloseModal.Margins.Top = 6;
+  BtnCloseModal.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F1F5F9');
+  BtnCloseModal.clProSettings.FontColor = clAlphaColor.clHexToColor('#475569');
+  BtnCloseModal.clProSettings.FontSize = 11;
+  BtnCloseModal.clProSettings.TextSettings.Font.Style = [fsBold];
+  BtnCloseModal.clProSettings.IsRound = True;
+  BtnCloseModal.clProSettings.RoundHeight = 8;
+  BtnCloseModal.clProSettings.RoundWidth = 8;
+  BtnCloseModal.clProSettings.IsFill = True;
+  BtnCloseModal.SetclProSettings(BtnCloseModal.clProSettings);
+  AnaForm.AddNewEvent(BtnCloseModal, tbeOnClick, 'CloseModal');
+
+  TempQry = Clomosy.DBSQLiteQueryWith('SELECT COUNT(*) as cnt FROM customers');
+  TempQry.OpenOrExecute;
+  if (TempQry.Found)
+  {
+    if (TempQry.FieldByName('cnt').AsInteger == 0)
+    {
+      Clomosy.DBSQLiteQuery.Sql.Text = 'INSERT INTO customers (name, company, phone, email, industry, value, state, created_at) VALUES (''Elif Öztürk'', ''Zirve Holding'', ''5321112233'', ''elif@zirve.com'', ''Finans'', 620000, 0, ''2026-08-19'');';
+      Clomosy.DBSQLiteQuery.OpenOrExecute;
+      Clomosy.DBSQLiteQuery.Sql.Text = 'INSERT INTO customers (name, company, phone, email, industry, value, state, created_at) VALUES (''Medikal Tıp A.Ş.'', ''Medikal Grup'', ''5442223344'', ''teklif@medikal.com'', ''Sağlık'', 310000, 2, ''2026-08-19'');';
+      Clomosy.DBSQLiteQuery.OpenOrExecute;
+      Clomosy.DBSQLiteQuery.Sql.Text = 'INSERT INTO customers (name, company, phone, email, industry, value, state, created_at) VALUES (''Bora Demir'', ''Demir Mimarlık'', ''5553334455'', ''bora@demirmim.com'', ''Mimarlık'', 450000, 3, ''2026-08-19'');';
+      Clomosy.DBSQLiteQuery.OpenOrExecute;
+      Clomosy.DBSQLiteQuery.Sql.Text = 'INSERT INTO customers (name, company, phone, email, industry, value, state, created_at) VALUES (''Ahmet Kaya'', ''Kaya Lojistik'', ''5334445566'', ''ahmet@kayaloj.com'', ''Lojistik'', 460000, 3, ''2026-08-19'');';
+      Clomosy.DBSQLiteQuery.OpenOrExecute;
+    }
+  }
+
+  AnaForm.AddNewEvent(AnaForm, tbeOnFormResize, 'OnFormResize');
+  ResponsiveDuzenle;
+  TabGecisleri(0);
+
+  AnaForm.Run;
+}
