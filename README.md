@@ -4,7 +4,7 @@
 [![Language](https://img.shields.io/badge/Language-TRObject-blue.svg)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Bu depo, **Clomosy** mobil uygulama geliştirme platformunda **TRObject** programlama dili ile geliştirilmiş kurumsal kod kalıplarını, donanım entegrasyonlarını ve REST API mimarilerini içerir.
+Bu depo, **Clomosy** mobil uygulama geliştirme platformunda **TRObject** programlama dili ile geliştirilmiş kurumsal kod kalıplarını, donanım entegrasyonlarını, yerel veritabanı mimarilerini ve REST API çözümlerini içerir.
 
 ---
 
@@ -13,9 +13,9 @@ Bu depo, **Clomosy** mobil uygulama geliştirme platformunda **TRObject** progra
 | Modül / Dizin | Kapsam | Öne Çıkan Özellikler | Durum |
 | :--- | :--- | :--- | :---: |
 | [📍 Canlı Hava & GPS (Leaflet)](./02-data-and-sensors/live-weather-gps-rest/) | Veri & Sensör Entegrasyonu | `TclRest`, Open-Meteo API, GPS Timer, Leaflet JS WebView | ✅ Hazır |
-| `01-ui-components` | Dinamik Arayüz Tasarımı | Dynamic Layout, Form Kontrolleri, Özelleştirilmiş Bileşenler | ⏳ Planlandı |
+| [📈 Kurumsal CRM & Dashboard](./04-complete-apps/enterprise-crm-dashboard/) | Uçtan Uca Tam Uygulama | Yerel SQLite CRUD, Canlı KPI & Çubuk Grafik, Accordion UI | ✅ Hazır |
+| `01-ui-components` | Dinamik Arayüz Tasarımı | Dynamic Layout, Form Kontrolleri, Özel Kart Bileşenleri | ⏳ Planlandı |
 | `03-hardware-and-sensors` | Donanım ve Servisler | Barkod / QR Okuma, Kamera, Push Notification | ⏳ Planlandı |
-| `04-complete-apps` | Uçtan Uca Mini Uygulamalar | SQLite CRUD, Saha Operasyon & Ziyaret Akışları | ⏳ Planlandı |
 
 ---
 
@@ -33,9 +33,9 @@ Bu depo, **Clomosy** mobil uygulama geliştirme platformunda **TRObject** progra
 ---
 
 ## 💡 Kodlama Standartları
-- **Hata Toleransı:** Mobil cihazların bölgesel ayarlarından doğabilecek koordinat/veri uyuşmazlıkları (örn: `,` / `.` dönüşümleri) ele alınmıştır.
-- **Asenkron Güvenlik:** Donanım servisleri (GPS, Kamera) zaman aşımı (timeout) kontrolleriyle donatılmıştır.
-- **Modülerlik:** Her örnek bağımsız olarak derlenebilir ve çalıştırılabilir yapıdadır.
+- **Veritabanı Dayanıklılığı:** Tablo yapıları ve sütun güncellemeleri migrasyon kontrolleriyle (`IF NOT EXISTS`, `ALTER TABLE`) desteklenir.
+- **Hata Toleransı:** Mobil cihazların bölgesel ayarlarından doğabilecek koordinat/ondalık uyuşmazlıkları (`,`/`.`) normalize edilmiştir.
+- **Performans & Temizlik:** Dinamik arayüzlerde bileşen bellek yönetimi (`Free` çağrıları) gözetilmiştir.
 
 ---
 
