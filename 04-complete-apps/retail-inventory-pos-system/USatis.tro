@@ -1,0 +1,753 @@
+var
+  SatisForm: TclForm;
+  MainScroll: TclVertScrollBox;
+  UstPanel, SolPanel, SagPanel, fisPanel: TclProPanel;
+  UrunListe: TclProListView;
+  BarkodEdt: TclProEdit;
+  MiktarEdt: TclEdit;
+  ToplamLabel, FisLabel: TclProLabel;
+  SatisBtn, UrunEkleBtn, TemizleBtn, GecmisBtn, BtnBarkodTara, GeriAlBtn: TclProButton;
+  searchEdt: TclProSearchEdit;
+  DPanl: TClProListViewDesignerPanel;
+  UrunLbl, BarkodLbl, KategoriLbl, FiyatLbl, StokMiktarLbl: TClProLabel;
+  SepetListesi: TclStringList;
+  IsBusy: Boolean;
+  IsWide: Boolean;
+  Sc: Double;
+  ScreenW: Integer;
+  ScreenH: Integer;
+  SolW: Integer;
+  SolPhoneH: Integer;
+  FisH: Integer;
+
+void TablolariKontrolEtVeOlustur;
+var
+  TableExists: Boolean;
+{
+  try
+    Clomosy.DBSQLiteConnect(Clomosy.AppFilesPath + 'StokTakip.db', '');
+
+    Clomosy.DBSQLiteQuery.SQL.Text = 'SELECT name FROM sqlite_master WHERE type="table" AND name="StokTakip"';
+    Clomosy.DBSQLiteQuery.OpenOrExecute;
+    TableExists = not Clomosy.DBSQLiteQuery.Eof;
+
+    if not (TableExists)
+    {
+      Clomosy.DBSQLiteQuery.SQL.Text = 'CREATE TABLE StokTakip (' +
+        'UrunAdi TEXT NOT NULL, ' +
+        'Barkod TEXT NOT NULL UNIQUE, ' +
+        'Kategori TEXT NOT NULL, ' +
+        'Fiyat TEXT NOT NULL, ' +
+        'StokMiktari TEXT NOT NULL)';
+      Clomosy.DBSQLiteQuery.OpenOrExecute;
+    }
+
+    Clomosy.DBSQLiteQuery.SQL.Text = 'SELECT name FROM sqlite_master WHERE type="table" AND name="SatisGecmisi"';
+    Clomosy.DBSQLiteQuery.OpenOrExecute;
+    TableExists = not Clomosy.DBSQLiteQuery.Eof;
+
+    if not (TableExists)
+    {
+      Clomosy.DBSQLiteQuery.SQL.Text = 'CREATE TABLE SatisGecmisi (' +
+        'SatisID INTEGER PRIMARY KEY AUTOINCREMENT, ' +
+        'IslemNo TEXT, ' +
+        'Tarih TEXT, ' +
+        'Barkod TEXT, ' +
+        'UrunAdi TEXT, ' +
+        'Miktar INTEGER, ' +
+        'Tutar TEXT)';
+      Clomosy.DBSQLiteQuery.OpenOrExecute;
+    }
+  except
+    ShowMessage('Tablo Olusturma Hatasi: ' + LastExceptionMessage);
+  }
+}
+
+void CalcLayout;
+{
+  ScreenW = SatisForm.clWidth;
+  ScreenH = SatisForm.clHeight;
+  IsWide = ((ScreenW >= 600) && (ScreenH >= 700));
+
+  if (IsWide)
+  {
+    Sc = 1;
+    if (ScreenW >= 1000) { Sc = 1.1; }
+
+    SolW = ScreenW * 0.32;
+    if (SolW < 300) { SolW = 300; }
+    if (SolW > 400) { SolW = 400; }
+  }
+  else
+  {
+    Sc = ScreenW / 390;
+    if (Sc < 0.85) { Sc = 0.85; }
+    if (Sc > 1.25) { Sc = 1.25; }
+    SolW = ScreenW;
+  }
+
+  FisH = 180 * Sc;
+  SolPhoneH = (435 * Sc) + FisH + 140;
+  if (Clomosy.PlatformIsMobile)
+  {
+    SolPhoneH = SolPhoneH + (50 * Sc) + 15;
+  }
+}
+
+void SetupEdit(AEdit: TclProEdit; APlaceHolder: String);
+{
+  AEdit.Align = alTop;
+  AEdit.Height = 50 * Sc;
+  AEdit.Margins.Top = 10;
+  AEdit.Margins.Left = 15;
+  AEdit.Margins.Right = 15;
+  AEdit.TextPrompt = APlaceHolder;
+  AEdit.clProSettings.FontSize = 14 * Sc;
+  AEdit.clProSettings.BorderColor = clAlphaColor.clHexToColor('#CBD5E1');
+  AEdit.clProSettings.BorderWidth = 1;
+  AEdit.clProSettings.RoundWidth = 8;
+  AEdit.clProSettings.RoundHeight = 8;
+  AEdit.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F8FAFC');
+  AEdit.SetclProSettings(AEdit.clProSettings);
+}
+
+void SetupBtn(ABtn: TclProButton; AColor: String; AHeight: Integer; AFont: Integer; ABottom: Boolean; AMargin: Integer);
+{
+  if (ABottom)
+  {
+    ABtn.Align = alBottom;
+    ABtn.Margins.Bottom = AMargin;
+  }
+  else
+  {
+    ABtn.Align = alTop;
+    ABtn.Margins.Top = AMargin;
+  }
+  ABtn.Height = AHeight * Sc;
+  ABtn.Margins.Left = 15;
+  ABtn.Margins.Right = 15;
+  ABtn.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(AColor);
+  ABtn.clProSettings.FontColor = clAlphaColor.clWhite;
+  ABtn.clProSettings.FontSize = AFont * Sc;
+  ABtn.clProSettings.IsFill = True;
+  ABtn.clProSettings.IsRound = True;
+  ABtn.clProSettings.RoundWidth = 8;
+  ABtn.clProSettings.RoundHeight = 8;
+  ABtn.clProSettings.BorderWidth = 0;
+  ABtn.clProSettings.TextSettings.Font.Style = [fsBold];
+  ABtn.SetclProSettings(ABtn.clProSettings);
+}
+
+void SetupListLabel(ALbl: TclProLabel; AColor: String; AFont: Integer; ABold: Boolean);
+{
+  ALbl.Align = alLeft;
+  ALbl.Margins.Left = 15;
+  ALbl.Height = 25 * Sc;
+  ALbl.clProSettings.AutoSize = True;
+  ALbl.clProSettings.FontColor = clAlphaColor.clHexToColor(AColor);
+  ALbl.clProSettings.FontSize = AFont * Sc;
+  ALbl.clProSettings.FontHorzAlign = palLeading;
+  ALbl.clProSettings.FontVertAlign = palCenter;
+  if (ABold)
+  {
+    ALbl.clProSettings.TextSettings.Font.Style = [fsBold];
+  }
+  ALbl.SetclProSettings(ALbl.clProSettings);
+}
+
+void GecmiseGit;
+{
+  Clomosy.RunUnit('USatisGecmisi');
+}
+
+void AlanTemizle;
+{
+  IsBusy = True;
+  BarkodEdt.Text = '';
+  MiktarEdt.Text = '1';
+  ToplamLabel.Text = 'Toplam: 0 TL';
+  IsBusy = False;
+}
+
+void GetData;
+var
+  Qry: TclSQLiteQuery;
+  SQLText: String;
+{
+  try
+    SQLText = 'Select ''Urun Adi: ''||UrunAdi as UrunLbl, ''Barkod: ''||Barkod as BarkodLbl, ''Kategori: ''||Kategori as KategoriLbl, ''Fiyat: ''||Fiyat as FiyatLbl, ''Stok: ''||StokMiktari as StokMiktarLbl From StokTakip';
+
+    if (searchEdt.Text <> '')
+    {
+      SQLText = SQLText + ' WHERE UrunAdi LIKE ' + QuotedStr('%' + searchEdt.Text + '%');
+    }
+
+    Qry = Clomosy.DBSQLiteQueryWith(SQLText);
+    Qry.OpenOrExecute;
+
+    if (Qry.Found)
+    {
+      UrunListe.ClLoadProListViewDataFromDataset(Qry);
+    }
+    else
+    {
+      UrunListe.ClearList;
+    }
+  except
+    ShowMessage('Hata: ' + LastExceptionMessage);
+  }
+}
+
+function StokGetir(ABarkod: String): Integer;
+{
+  Clomosy.DBSQLiteQuery.SQL.Text = 'Select StokMiktari From StokTakip Where Barkod = ' + QuotedStr(ABarkod);
+  Clomosy.DBSQLiteQuery.OpenOrExecute;
+
+  if (Clomosy.DBSQLiteQuery.Found)
+  {
+    Result = Round(StrToFloat(Clomosy.DBSQLiteQuery.FieldByName('StokMiktari').AsString));
+  }
+  else
+  {
+    Result = -1;
+  }
+}
+
+function SepetMiktarGetir(ABarkod: String): Integer;
+var
+  i: Integer;
+  Satir: String;
+{
+  Result = 0;
+  for i = 0 to SepetListesi.Count - 1
+  {
+    Satir = Clomosy.StringListItemString(SepetListesi, i);
+    if (clGetStringTo(Satir, ';') == ABarkod)
+    {
+      Result = StrToInt(clGetStringAfter(Satir, ';'));
+    }
+  }
+}
+
+void SepetKaydet(ABarkod: String; AMiktar: Integer);
+var
+  i: Integer;
+  Satir: String;
+  Yeni: TclStringList;
+  Bulundu: Boolean;
+{
+  Yeni = Clomosy.StringListNew;
+  Bulundu = False;
+
+  for i = 0 to SepetListesi.Count - 1
+  {
+    Satir = Clomosy.StringListItemString(SepetListesi, i);
+    if (clGetStringTo(Satir, ';') == ABarkod)
+    {
+      Yeni.Add(ABarkod + ';' + IntToStr(AMiktar));
+      Bulundu = True;
+    }
+    else
+    {
+      Yeni.Add(Satir);
+    }
+  }
+
+  if not (Bulundu)
+  {
+    Yeni.Add(ABarkod + ';' + IntToStr(AMiktar));
+  }
+
+  SepetListesi = Yeni;
+}
+
+void SepetYenile;
+var
+  i, Miktar: Integer;
+  Satir, Barkod, Ad: String;
+  Fiyat, Tutar, Toplam: Double;
+  Gorunum: TclStringList;
+{
+  if (SepetListesi.Count == 0)
+  {
+    FisLabel.Text = 'Sepet Bos';
+    Exit;
+  }
+
+  Gorunum = Clomosy.StringListNew;
+  Toplam = 0;
+
+  for i = 0 to SepetListesi.Count - 1
+  {
+    Satir = Clomosy.StringListItemString(SepetListesi, i);
+    Barkod = clGetStringTo(Satir, ';');
+    Miktar = StrToInt(clGetStringAfter(Satir, ';'));
+
+    Clomosy.DBSQLiteQuery.SQL.Text = 'Select UrunAdi, Fiyat From StokTakip Where Barkod = ' + QuotedStr(Barkod);
+    Clomosy.DBSQLiteQuery.OpenOrExecute;
+
+    if (Clomosy.DBSQLiteQuery.Found)
+    {
+      Ad = Clomosy.DBSQLiteQuery.FieldByName('UrunAdi').AsString;
+      Fiyat = StrToFloat(Clomosy.DBSQLiteQuery.FieldByName('Fiyat').AsString);
+      Tutar = Fiyat * Miktar;
+      Toplam = Toplam + Tutar;
+      Gorunum.Add(IntToStr(i + 1) + '. ' + Ad + ' x' + IntToStr(Miktar) + ' = ' + FormatFloat('#,##0.00', Tutar) + ' TL');
+    }
+  }
+
+  Gorunum.Add('------------------');
+  Gorunum.Add('TOPLAM: ' + FormatFloat('#,##0.00', Toplam) + ' TL');
+  FisLabel.Text = Gorunum.Text;
+}
+
+void ToplamHesapla;
+var
+  Fiyat: Double;
+  Miktar: Integer;
+{
+  if ((BarkodEdt.Text <> '') && (MiktarEdt.Text <> ''))
+  {
+    try
+      Clomosy.DBSQLiteQuery.SQL.Text = 'Select Fiyat From StokTakip Where Barkod = ' + QuotedStr(BarkodEdt.Text);
+      Clomosy.DBSQLiteQuery.OpenOrExecute;
+
+      if (Clomosy.DBSQLiteQuery.Found)
+      {
+        Fiyat = StrToFloat(Clomosy.DBSQLiteQuery.FieldByName('Fiyat').AsString);
+        Miktar = Round(StrToFloat(MiktarEdt.Text));
+        ToplamLabel.Text = 'Toplam: ' + FormatFloat('#,##0.00', Fiyat * Miktar) + ' TL';
+      }
+      else
+      {
+        ToplamLabel.Text = 'Toplam: 0 TL';
+      }
+    except
+      ToplamLabel.Text = 'Toplam: 0 TL';
+    }
+  }
+  else
+  {
+    ToplamLabel.Text = 'Toplam: 0 TL';
+  }
+}
+
+void onItemClicked;
+{
+  try
+    BarkodEdt.Text = clGetStringAfter(UrunListe.clSelectedItemData(clText), ': ');
+  except
+    ShowMessage('Liste secim hatasi: ' + LastExceptionMessage);
+  }
+}
+
+void UrunEkle;
+var
+  Barkod: String;
+  Miktar, Stok, Mevcut: Integer;
+{
+  if ((BarkodEdt.Text == '') || (MiktarEdt.Text == ''))
+  {
+    Exit;
+  }
+
+  Barkod = BarkodEdt.Text;
+
+  try
+    Miktar = Round(StrToFloat(MiktarEdt.Text));
+  except
+    ShowMessage('Gecersiz miktar!');
+    Exit;
+  }
+
+  if (Miktar <= 0)
+  {
+    ShowMessage('Miktar 0''dan buyuk olmali!');
+    Exit;
+  }
+
+  Stok = StokGetir(Barkod);
+
+  if (Stok < 0)
+  {
+    ShowMessage('Urun bulunamadi! Lutfen once stok ekleyiniz.');
+    AlanTemizle;
+    Exit;
+  }
+
+  Mevcut = SepetMiktarGetir(Barkod);
+
+  if ((Mevcut + Miktar) > Stok)
+  {
+    ShowMessage('Yetersiz stok! Stokta ' + IntToStr(Stok) + ' adet var, sepette ' + IntToStr(Mevcut) + ' adet var.');
+    AlanTemizle;
+    Exit;
+  }
+
+  SepetKaydet(Barkod, Mevcut + Miktar);
+  SepetYenile;
+  AlanTemizle;
+  BarkodEdt.SetFocus;
+}
+
+void BarkodTara;
+{
+  if (Clomosy.PlatformIsMobile)
+  {
+    SatisForm.CallBarcodeReader(BarkodEdt);
+  }
+}
+
+void OtomatikEkle;
+{
+  if (IsBusy)
+  {
+    Exit;
+  }
+
+  if (BarkodEdt.Text == '')
+  {
+    ToplamLabel.Text = 'Toplam: 0 TL';
+    Exit;
+  }
+
+  if (StokGetir(BarkodEdt.Text) >= 0)
+  {
+    if (MiktarEdt.Text == '')
+    {
+      MiktarEdt.Text = '1';
+    }
+    UrunEkle;
+  }
+  else
+  {
+    ToplamLabel.Text = 'Toplam: 0 TL';
+  }
+}
+
+void SatisYap;
+var
+  i, Miktar, MevcutStok, Stok: Integer;
+  Satir, Barkod, UrunAdi, IslemNo: String;
+  Fiyat, Tutar: Double;
+{
+  if (SepetListesi.Count == 0)
+  {
+    ShowMessage('Sepet bos!');
+    Exit;
+  }
+
+  try
+    for i = 0 to SepetListesi.Count - 1
+    {
+      Satir = Clomosy.StringListItemString(SepetListesi, i);
+      Barkod = clGetStringTo(Satir, ';');
+      Miktar = StrToInt(clGetStringAfter(Satir, ';'));
+      Stok = StokGetir(Barkod);
+
+      if (Stok < Miktar)
+      {
+        ShowMessage('Yetersiz stok! Barkod: ' + Barkod + ' / Stok: ' + IntToStr(Stok));
+        Exit;
+      }
+    }
+
+    IslemNo = FormatDateTime('yyyymmddhhnnss', Now) + '_' + IntToStr(clMath.GenerateRandom(100, 999));
+
+    for i = 0 to SepetListesi.Count - 1
+    {
+      Satir = Clomosy.StringListItemString(SepetListesi, i);
+      Barkod = clGetStringTo(Satir, ';');
+      Miktar = StrToInt(clGetStringAfter(Satir, ';'));
+
+      Clomosy.DBSQLiteQuery.SQL.Text = 'Select UrunAdi, Fiyat, StokMiktari From StokTakip Where Barkod = ' + QuotedStr(Barkod);
+      Clomosy.DBSQLiteQuery.OpenOrExecute;
+
+      if (Clomosy.DBSQLiteQuery.Found)
+      {
+        UrunAdi = Clomosy.DBSQLiteQuery.FieldByName('UrunAdi').AsString;
+        Fiyat = StrToFloat(Clomosy.DBSQLiteQuery.FieldByName('Fiyat').AsString);
+        MevcutStok = Round(StrToFloat(Clomosy.DBSQLiteQuery.FieldByName('StokMiktari').AsString));
+        Tutar = Fiyat * Miktar;
+
+        Clomosy.DBSQLiteQuery.SQL.Text = 'Update StokTakip Set StokMiktari = ' +
+          IntToStr(MevcutStok - Miktar) +
+          ' Where Barkod = ' + QuotedStr(Barkod);
+        Clomosy.DBSQLiteQuery.OpenOrExecute;
+
+        Clomosy.DBSQLiteQuery.SQL.Text = 'INSERT INTO SatisGecmisi (IslemNo, Tarih, Barkod, UrunAdi, Miktar, Tutar) VALUES (' +
+          QuotedStr(IslemNo) + ', ' +
+          QuotedStr(DateTimeToStr(Now)) + ', ' +
+          QuotedStr(Barkod) + ', ' +
+          QuotedStr(UrunAdi) + ', ' +
+          IntToStr(Miktar) + ', ' +
+          QuotedStr(FormatFloat('#,##0.00', Tutar)) + ')';
+        Clomosy.DBSQLiteQuery.OpenOrExecute;
+      }
+    }
+
+    ShowMessage('Satis tamamlandi, gecmise yonlendiriliyorsunuz...');
+    SepetListesi = Clomosy.StringListNew;
+    SepetYenile;
+    AlanTemizle;
+    GetData;
+
+    Clomosy.RunUnit('USatisGecmisi');
+  except
+    ShowMessage('Hata: ' + LastExceptionMessage);
+  }
+}
+
+void FisTemizle;
+{
+  SepetListesi = Clomosy.StringListNew;
+  SepetYenile;
+  AlanTemizle;
+}
+
+void SonUrunuCikar;
+var
+  i: Integer;
+  Yeni: TclStringList;
+{
+  if (SepetListesi.Count == 0)
+  {
+    Exit;
+  }
+
+  Yeni = Clomosy.StringListNew;
+  for i = 0 to SepetListesi.Count - 2
+  {
+    Yeni.Add(Clomosy.StringListItemString(SepetListesi, i));
+  }
+
+  SepetListesi = Yeni;
+  SepetYenile;
+}
+
+{
+  SatisForm = TclForm.Create(Self);
+  SatisForm.clSetWindowState(fwsMaximized);
+  SatisForm.SetFormColor('#F8FAFC', '#F8FAFC', clGNone);
+
+  TablolariKontrolEtVeOlustur;
+  SepetListesi = Clomosy.StringListNew;
+  IsBusy = False;
+
+  CalcLayout;
+
+  UstPanel = SatisForm.AddNewProPanel(SatisForm, 'UstPanel');
+  UstPanel.Align = alTop;
+  UstPanel.Height = 70 * Sc;
+  UstPanel.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#3B82F6');
+  UstPanel.clProSettings.IsFill = True;
+  UstPanel.SetclProSettings(UstPanel.clProSettings);
+
+  searchEdt = SatisForm.AddNewProSearchEdit(UstPanel, 'searchEdt', 'Urun Ara...');
+  if (IsWide)
+  {
+    searchEdt.Align = alCenter;
+    searchEdt.Width = 400;
+  }
+  else
+  {
+    searchEdt.Align = alClient;
+    searchEdt.Margins.Left = 15;
+    searchEdt.Margins.Right = 15;
+  }
+  searchEdt.Margins.Top = 15 * Sc;
+  searchEdt.Margins.Bottom = 15 * Sc;
+  searchEdt.clProSettings.FontSize = 14 * Sc;
+  searchEdt.clProSettings.RoundWidth = 10;
+  searchEdt.clProSettings.RoundHeight = 10;
+  searchEdt.clProSettings.BackgroundColor = clAlphaColor.clWhite;
+  searchEdt.SetclProSettings(searchEdt.clProSettings);
+
+  if not (IsWide)
+  {
+    MainScroll = SatisForm.AddNewVertScrollBox(SatisForm, 'MainScroll');
+    MainScroll.Align = alClient;
+  }
+
+  if (IsWide)
+  {
+    SolPanel = SatisForm.AddNewProPanel(SatisForm, 'SolPanel');
+    SolPanel.Align = alLeft;
+    SolPanel.Width = SolW;
+    SolPanel.Margins.Top = 10;
+    SolPanel.Margins.Left = 10;
+    SolPanel.Margins.Bottom = 10;
+  }
+  else
+  {
+    SolPanel = SatisForm.AddNewProPanel(MainScroll, 'SolPanel');
+    SolPanel.Align = alTop;
+    SolPanel.Height = SolPhoneH;
+    SolPanel.Margins.Top = 10;
+    SolPanel.Margins.Left = 10;
+    SolPanel.Margins.Right = 10;
+  }
+  SolPanel.clProSettings.BackgroundColor = clAlphaColor.clWhite;
+  SolPanel.clProSettings.IsFill = True;
+  SolPanel.clProSettings.RoundWidth = 12;
+  SolPanel.clProSettings.RoundHeight = 12;
+  SolPanel.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  SolPanel.clProSettings.BorderWidth = 1;
+  SolPanel.SetclProSettings(SolPanel.clProSettings);
+
+  if (Clomosy.PlatformIsMobile)
+  {
+    BtnBarkodTara = SatisForm.AddNewProButton(SolPanel, 'BtnBarkodTara', 'BARKOD TARA');
+    SetupBtn(BtnBarkodTara, '#F59E0B', 50, 14, False, 15);
+    SatisForm.AddNewEvent(BtnBarkodTara, tbeOnClick, 'BarkodTara');
+  }
+
+  BarkodEdt = SatisForm.AddNewProEdit(SolPanel, 'BarkodEdt', '');
+  SetupEdit(BarkodEdt, 'Barkod Okut/Yaz');
+  BarkodEdt.KeyboardType = vktNumberPad;
+  SatisForm.AddNewEvent(BarkodEdt, tbeOnChange, 'OtomatikEkle');
+
+  MiktarEdt = SatisForm.AddNewEdit(SolPanel, 'MiktarEdt', 'Miktar');
+  MiktarEdt.Align = alTop;
+  MiktarEdt.Height = 50 * Sc;
+  MiktarEdt.Margins.Top = 10;
+  MiktarEdt.Margins.Left = 15;
+  MiktarEdt.Margins.Right = 15;
+  MiktarEdt.Text = '1';
+  MiktarEdt.KeyboardType = vktNumberPad;
+
+  ToplamLabel = SatisForm.AddNewProLabel(SolPanel, 'ToplamLabel', 'Toplam: 0 TL');
+  ToplamLabel.Align = alTop;
+  ToplamLabel.Height = 40 * Sc;
+  ToplamLabel.Margins.Top = 10;
+  ToplamLabel.clProSettings.FontSize = 18 * Sc;
+  ToplamLabel.clProSettings.FontColor = clAlphaColor.clHexToColor('#EF4444');
+  ToplamLabel.clProSettings.TextSettings.Font.Style = [fsBold];
+  ToplamLabel.clProSettings.FontHorzAlign = palCenter;
+  ToplamLabel.SetclProSettings(ToplamLabel.clProSettings);
+
+  UrunEkleBtn = SatisForm.AddNewProButton(SolPanel, 'UrunEkleBtn', 'SEPETE EKLE');
+  SetupBtn(UrunEkleBtn, '#3B82F6', 50, 14, False, 10);
+
+  GecmisBtn = SatisForm.AddNewProButton(SolPanel, 'GecmisBtn', 'GECMIS SATISLAR');
+  SetupBtn(GecmisBtn, '#64748B', 45, 14, True, 15);
+  SatisForm.AddNewEvent(GecmisBtn, tbeOnClick, 'GecmiseGit');
+
+  SatisBtn = SatisForm.AddNewProButton(SolPanel, 'SatisBtn', 'SATISI TAMAMLA');
+  SetupBtn(SatisBtn, '#10B981', 60, 16, True, 15);
+
+  TemizleBtn = SatisForm.AddNewProButton(SolPanel, 'TemizleBtn', 'SEPETI TEMIZLE');
+  SetupBtn(TemizleBtn, '#94A3B8', 45, 14, True, 10);
+
+  GeriAlBtn = SatisForm.AddNewProButton(SolPanel, 'GeriAlBtn', 'SON URUNU CIKAR');
+  SetupBtn(GeriAlBtn, '#EF4444', 45, 14, True, 10);
+
+  fisPanel = SatisForm.AddNewProPanel(SolPanel, 'fisPanel');
+  fisPanel.Align = alClient;
+  fisPanel.Margins.Top = 15;
+  fisPanel.Margins.Bottom = 15;
+  fisPanel.Margins.Left = 15;
+  fisPanel.Margins.Right = 15;
+  fisPanel.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FEF3C7');
+  fisPanel.clProSettings.IsFill = True;
+  fisPanel.clProSettings.BorderColor = clAlphaColor.clHexToColor('#F59E0B');
+  fisPanel.clProSettings.BorderWidth = 1;
+  fisPanel.clProSettings.RoundWidth = 8;
+  fisPanel.clProSettings.RoundHeight = 8;
+  fisPanel.SetclProSettings(fisPanel.clProSettings);
+
+  FisLabel = SatisForm.AddNewProLabel(fisPanel, 'FisLabel', 'Sepet Bos');
+  FisLabel.Align = alClient;
+  FisLabel.Margins.Top = 10;
+  FisLabel.Margins.Left = 10;
+  FisLabel.Margins.Right = 10;
+  FisLabel.clProSettings.FontSize = 13 * Sc;
+  FisLabel.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E293B');
+  FisLabel.clProSettings.FontVertAlign = palLeading;
+  FisLabel.SetclProSettings(FisLabel.clProSettings);
+
+  if (IsWide)
+  {
+    SagPanel = SatisForm.AddNewProPanel(SatisForm, 'SagPanel');
+    SagPanel.Align = alClient;
+    SagPanel.Margins.Top = 10;
+    SagPanel.Margins.Left = 10;
+    SagPanel.Margins.Right = 10;
+    SagPanel.Margins.Bottom = 10;
+  }
+  else
+  {
+    SagPanel = SatisForm.AddNewProPanel(MainScroll, 'SagPanel');
+    SagPanel.Align = alTop;
+    SagPanel.Height = ScreenH * 0.7;
+    if (SagPanel.Height < 320) { SagPanel.Height = 320; }
+    SagPanel.Margins.Top = 10;
+    SagPanel.Margins.Left = 10;
+    SagPanel.Margins.Right = 10;
+    SagPanel.Margins.Bottom = 10;
+  }
+  SagPanel.clProSettings.BackgroundColor = clAlphaColor.clWhite;
+  SagPanel.clProSettings.IsFill = True;
+  SagPanel.clProSettings.RoundWidth = 12;
+  SagPanel.clProSettings.RoundHeight = 12;
+  SagPanel.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  SagPanel.clProSettings.BorderWidth = 1;
+  SagPanel.SetclProSettings(SagPanel.clProSettings);
+
+  UrunListe = SatisForm.AddNewProListView(SagPanel, 'UrunListe');
+  UrunListe.Align = alClient;
+  UrunListe.Margins.Top = 10;
+  UrunListe.Margins.Left = 10;
+  UrunListe.Margins.Right = 10;
+  UrunListe.Margins.Bottom = 10;
+
+  DPanl = SatisForm.AddNewProListViewDesignerPanel(UrunListe, 'DPanl');
+  DPanl.Align = alTop;
+  DPanl.Height = 120 * Sc;
+  DPanl.clProSettings.IsRound = True;
+  DPanl.clProSettings.IsFill = True;
+  DPanl.clProSettings.ItemHeight = 130 * Sc;
+  DPanl.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F8FAFC');
+  DPanl.clProSettings.BorderColor = clAlphaColor.clHexToColor('#CBD5E1');
+  DPanl.clProSettings.BorderWidth = 1;
+  DPanl.clProSettings.RoundWidth = 10;
+  DPanl.clProSettings.RoundHeight = 10;
+  DPanl.SetclProSettings(DPanl.clProSettings);
+  UrunListe.SetDesignerPanel(DPanl);
+
+  UrunLbl = SatisForm.AddNewProLabel(DPanl, 'UrunLbl', '-');
+  SetupListLabel(UrunLbl, '#1E293B', 16, True);
+  UrunLbl.Margins.Top = 5;
+  UrunLbl.Height = 30 * Sc;
+  DPanl.AddPanelObject(UrunLbl, clText4);
+
+  FiyatLbl = SatisForm.AddNewProLabel(DPanl, 'FiyatLbl', '-');
+  SetupListLabel(FiyatLbl, '#10B981', 14, True);
+  FiyatLbl.Width = 100 * Sc;
+  FiyatLbl.Margins.Right = 15;
+  DPanl.AddPanelObject(FiyatLbl, clText2);
+
+  BarkodLbl = SatisForm.AddNewProLabel(DPanl, 'BarkodLbl', '-');
+  SetupListLabel(BarkodLbl, '#64748B', 13, False);
+  DPanl.AddPanelObject(BarkodLbl, clText);
+
+  KategoriLbl = SatisForm.AddNewProLabel(DPanl, 'KategoriLbl', '-');
+  SetupListLabel(KategoriLbl, '#64748B', 13, False);
+  DPanl.AddPanelObject(KategoriLbl, clText1);
+
+  StokMiktarLbl = SatisForm.AddNewProLabel(DPanl, 'StokMiktarLbl', '-');
+  SetupListLabel(StokMiktarLbl, '#3B82F6', 13, True);
+  StokMiktarLbl.Margins.Bottom = 5;
+  DPanl.AddPanelObject(StokMiktarLbl, clText3);
+
+  SatisForm.AddNewEvent(UrunListe, tbeOnItemClick, 'onItemClicked');
+  SatisForm.AddNewEvent(MiktarEdt, tbeOnChange, 'ToplamHesapla');
+  SatisForm.AddNewEvent(SatisBtn, tbeOnClick, 'SatisYap');
+  SatisForm.AddNewEvent(UrunEkleBtn, tbeOnClick, 'UrunEkle');
+  SatisForm.AddNewEvent(TemizleBtn, tbeOnClick, 'FisTemizle');
+  SatisForm.AddNewEvent(GeriAlBtn, tbeOnClick, 'SonUrunuCikar');
+  SatisForm.AddNewEvent(searchEdt, tbeOnKeyUp, 'GetData');
+
+  GetData;
+  SatisForm.Run;
+}
