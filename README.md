@@ -16,6 +16,7 @@ Bu depo, **Clomosy** mobil uygulama geliştirme platformunda **TRObject** progra
 | [📈 Kurumsal CRM & Dashboard](./04-complete-apps/enterprise-crm-dashboard/) | Uçtan Uca Tam Uygulama | Yerel SQLite CRUD, Canlı KPI & Çubuk Grafik, Accordion UI | ✅ Hazır |
 | [📦 Perakende Stok & POS Sistemi](./04-complete-apps/retail-inventory-pos-system/) | Çok Birimli Tam Uygulama | 4 Birimli Mimari, Barkod Okuma, Fiş/CSV Dışa Aktarma, Sepet Yönetimi | ✅ Hazır |
 | [🚗 Oto Yıkama & Servis Takip](./04-complete-apps/car-wash-service-tracker/) | Hizmet & Servis Yönetimi | Canlı Günlük Ciro Analizi, Hizmet Paket Seçimi, Dinamik SQLite Migrasyonu | ✅ Hazır |
+| [🅿️ Akıllı Otopark & Ücret Yönetimi](./04-complete-apps/smart-parking-slot-manager/) | Akıllı Şehir & Tesis Çözümü | Dinamik 4x5 Slot Matrisi, Dakika/Araç Tipi Tarife Motoru, SQLite Geçmişi | ✅ Hazır |
 
 
 ---
