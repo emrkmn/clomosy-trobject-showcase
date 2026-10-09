@@ -1,0 +1,886 @@
+var
+  MyForm: TclForm;
+  PnlHeader, PnlFooter, PnlContent, PnlStats: TclProPanel;
+  PnlRegisterView, PnlListView: TclProPanel;
+  PnlStatBekleyen, PnlStatTamamlanan, PnlStatCiro: TclProPanel;
+  PnlTabCol1, PnlTabCol2: TclProPanel;
+  PnlTabIndicator1, PnlTabIndicator2: TclProPanel;
+  ListScroll: TclVertScrollBox;
+  LblTitle, LblDate: TclProLabel;
+  LblStatBeklVal, LblStatTamVal, LblStatCiroVal: TclProLabel;
+  LblStatBeklTag, LblStatTamTag, LblStatCiroTag: TclProLabel;
+  BtnTabNew, BtnTabList: TclProButton;
+  BtnFltAll, BtnFltBekl, BtnFltTam: TclProButton;
+  EdtPlaka, EdtMusteri, EdtModel, EdtPhone: TclProEdit;
+  Lyt1, Lyt3: TclLayout;
+  BtnPkg1, BtnPkg2, BtnPkg3, BtnSave: TclProButton;
+  EdtSearch: TclProSearchEdit;
+  QryMain, QryStat: TclSQLiteQuery;
+  SelectedPkgName, SelectedPkgPrice, PendingID: String;
+  AktifSekmeIndex, FilterDurum, RenderNo: Integer;
+  DbOk: Boolean;
+
+// ---------------------------------------------------------------
+// Ortak stil yardimcilari
+// ---------------------------------------------------------------
+void StyleCard(Pnl: TclProPanel; Radius: Integer);
+{
+  Pnl.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  Pnl.clProSettings.IsFill = True;
+  Pnl.clProSettings.IsRound = True;
+  Pnl.clProSettings.RoundWidth = Radius;
+  Pnl.clProSettings.RoundHeight = Radius;
+  Pnl.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  Pnl.clProSettings.BorderWidth = 1;
+  Pnl.SetclProSettings(Pnl.clProSettings);
+}
+
+void StyleLabel(Lbl: TclProLabel; Size: Integer; Color: String; Bold: Boolean);
+{
+  Lbl.clProSettings.FontSize = Size;
+  Lbl.clProSettings.FontColor = clAlphaColor.clHexToColor(Color);
+  if (Bold)
+  {
+    Lbl.clProSettings.FontWeight = 1;
+  }
+  Lbl.SetclProSettings(Lbl.clProSettings);
+}
+
+void StyleButton(Btn: TclProButton; Bg: String; Fg: String; Size: Integer; Radius: Integer);
+{
+  Btn.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(Bg);
+  Btn.clProSettings.FontColor = clAlphaColor.clHexToColor(Fg);
+  Btn.clProSettings.IsFill = True;
+  Btn.clProSettings.IsRound = True;
+  Btn.clProSettings.RoundWidth = Radius;
+  Btn.clProSettings.RoundHeight = Radius;
+  Btn.clProSettings.FontSize = Size;
+  Btn.clProSettings.FontWeight = 1;
+  Btn.clProSettings.BorderWidth = 0;
+  Btn.SetclProSettings(Btn.clProSettings);
+}
+
+void StyleInput(Edt: TclProEdit);
+{
+  Edt.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F8FAFC');
+  Edt.clProSettings.RoundWidth = 10;
+  Edt.clProSettings.RoundHeight = 10;
+  Edt.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  Edt.clProSettings.BorderWidth = 1;
+  Edt.SetclProSettings(Edt.clProSettings);
+}
+
+void SetChipStyle(Btn: TclProButton; Sel: Boolean);
+{
+  if (Sel)
+  {
+    Btn.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#EFF6FF');
+    Btn.clProSettings.BorderColor = clAlphaColor.clHexToColor('#2563EB');
+    Btn.clProSettings.FontColor = clAlphaColor.clHexToColor('#2563EB');
+    Btn.clProSettings.BorderWidth = 2;
+  }
+  else
+  {
+    Btn.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+    Btn.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+    Btn.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E293B');
+    Btn.clProSettings.BorderWidth = 1;
+  }
+  Btn.SetclProSettings(Btn.clProSettings);
+}
+
+void SetTabState(Ind: TclProPanel; Btn: TclProButton; Active: Boolean; Accent: String);
+{
+  if (Active)
+  {
+    Ind.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(Accent);
+    Btn.clProSettings.FontColor = clAlphaColor.clHexToColor(Accent);
+  }
+  else
+  {
+    Ind.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#E2E8F0');
+    Btn.clProSettings.FontColor = clAlphaColor.clHexToColor('#94A3B8');
+  }
+  Ind.SetclProSettings(Ind.clProSettings);
+  Btn.SetclProSettings(Btn.clProSettings);
+}
+
+// ---------------------------------------------------------------
+// Veritabani
+// ---------------------------------------------------------------
+void SetupDB;
+var
+  QryCol: TclSQLiteQuery;
+  ColCount: Integer;
+{
+  DbOk = False;
+  if (not Clomosy.DBSQLiteConnect(Clomosy.AppFilesPath + 'CarWashV6.db', ''))
+  {
+    ShowMessage('Veritabani acilamadi: ' + Clomosy.DBLastError);
+    Exit;
+  }
+
+  if (not Clomosy.DBSQLiteExec('CREATE TABLE IF NOT EXISTS TBL_JOBS (' +
+    'ID INTEGER PRIMARY KEY AUTOINCREMENT, ' +
+    'Plaka TEXT, Musteri TEXT, Model TEXT, Telefon TEXT, ' +
+    'Paket TEXT, Ucret TEXT, Durum INTEGER DEFAULT 0, ' +
+    'Tarih TEXT, TeslimTarihi TEXT)'))
+  {
+    ShowMessage('TBL_JOBS olusturulamadi: ' + Clomosy.DBLastError);
+    Exit;
+  }
+
+  // Eski veritabaninda TeslimTarihi kolonu yoksa eklenir (varsa dokunulmaz)
+  try
+    QryCol = Clomosy.DBSQLiteQueryWith('SELECT COUNT(*) AS Cnt FROM pragma_table_info(' +
+      QuotedStr('TBL_JOBS') + ') WHERE name = ' + QuotedStr('TeslimTarihi'));
+    QryCol.OpenOrExecute;
+    ColCount = QryCol.FieldByName('Cnt').AsInteger;
+    if (ColCount == 0)
+    {
+      if (not Clomosy.DBSQLiteExec('ALTER TABLE TBL_JOBS ADD COLUMN TeslimTarihi TEXT'))
+      {
+        ShowMessage('Kolon eklenemedi: ' + Clomosy.DBLastError);
+        Exit;
+      }
+    }
+  except
+    ShowMessage('Veritabani kontrol hatasi: ' + LastExceptionMessage);
+    Exit;
+  }
+
+  DbOk = True;
+}
+
+void UpdateStats;
+var
+  BeklCount, TamCount: Integer;
+  CiroVal: Float;
+  Today: String;
+{
+  BeklCount = 0;
+  TamCount = 0;
+  CiroVal = 0;
+  Today = FormatDateTime('yyyy-mm-dd', Now);
+
+  try
+    QryStat = Clomosy.DBSQLiteQueryWith(
+      'SELECT IFNULL(SUM(CASE WHEN Durum = 0 THEN 1 ELSE 0 END), 0) AS Bekl, ' +
+      'IFNULL(SUM(CASE WHEN Durum = 1 THEN 1 ELSE 0 END), 0) AS Tam, ' +
+      'IFNULL(SUM(CASE WHEN Durum = 1 AND SUBSTR(TeslimTarihi, 1, 10) = ' + QuotedStr(Today) +
+      ' THEN CAST(Ucret AS REAL) ELSE 0 END), 0) AS Ciro FROM TBL_JOBS');
+    QryStat.OpenOrExecute;
+    if (QryStat.Found)
+    {
+      BeklCount = QryStat.FieldByName('Bekl').AsInteger;
+      TamCount = QryStat.FieldByName('Tam').AsInteger;
+      CiroVal = QryStat.FieldByName('Ciro').AsFloat;
+    }
+  except
+    ShowMessage('Istatistik hatasi: ' + LastExceptionMessage);
+  }
+
+  LblStatBeklVal.Text = IntToStr(BeklCount);
+  LblStatTamVal.Text = IntToStr(TamCount);
+  LblStatCiroVal.Text = FormatFloat('#,##0', CiroVal) + ' TL';
+}
+
+// ---------------------------------------------------------------
+// Liste
+// ---------------------------------------------------------------
+void RefreshList;
+var
+  SQL, KayitID, DurumCode, TarihStr, TeslimStr, SearchTxt, Sfx: String;
+  PnlItem, PnlDurumBar: TclProPanel;
+  LblPlaka, LblDetay, LblFiyat, LblTarih, LblEmpty: TclProLabel;
+  BtnIslem: TclProButton;
+  Cnt: Integer;
+{
+  RenderNo = RenderNo + 1;
+
+  if (Assigned(ListScroll))
+  {
+    ListScroll.Free;
+  }
+
+  ListScroll = MyForm.AddNewVertScrollBox(PnlListView, 'ListScroll_' + IntToStr(RenderNo));
+  ListScroll.Align = alClient;
+  ListScroll.Margins.Top = 6;
+
+  SearchTxt = UpperCase(Trim(EdtSearch.Text));
+  SQL = 'SELECT * FROM TBL_JOBS WHERE 1 = 1';
+  if (SearchTxt <> '')
+  {
+    SQL = SQL + ' AND Plaka LIKE ' + QuotedStr('%' + SearchTxt + '%');
+  }
+  if (FilterDurum >= 0)
+  {
+    SQL = SQL + ' AND Durum = ' + IntToStr(FilterDurum);
+  }
+  SQL = SQL + ' ORDER BY Durum ASC, ID DESC';
+
+  Cnt = 0;
+  try
+    QryMain = Clomosy.DBSQLiteQueryWith(SQL);
+    QryMain.OpenOrExecute;
+
+    if (QryMain.Found)
+    {
+      while (not QryMain.Eof)
+      {
+        Cnt = Cnt + 1;
+        KayitID = QryMain.FieldByName('ID').AsString;
+        DurumCode = QryMain.FieldByName('Durum').AsString;
+        Sfx = IntToStr(RenderNo) + '_' + KayitID;
+
+        TarihStr = 'Giris: ' + QryMain.FieldByName('Tarih').AsString;
+        TeslimStr = QryMain.FieldByName('TeslimTarihi').AsString;
+        if ((DurumCode == '1') && (TeslimStr <> ''))
+        {
+          TarihStr = TarihStr + '  |  Teslim: ' + TeslimStr;
+        }
+
+        PnlItem = MyForm.AddNewProPanel(ListScroll, 'PI_' + Sfx);
+        PnlItem.Align = alTop;
+        PnlItem.Height = 150;
+        PnlItem.Margins.Left = 10;
+        PnlItem.Margins.Right = 10;
+        PnlItem.Margins.Bottom = 8;
+        StyleCard(PnlItem, 12);
+
+        PnlDurumBar = MyForm.AddNewProPanel(PnlItem, 'DB_' + Sfx);
+        PnlDurumBar.Align = alLeft;
+        PnlDurumBar.Width = 5;
+        PnlDurumBar.clProSettings.IsFill = True;
+        PnlDurumBar.clProSettings.IsRound = True;
+        PnlDurumBar.clProSettings.RoundWidth = 3;
+        PnlDurumBar.clProSettings.RoundHeight = 3;
+        if (DurumCode == '0')
+        {
+          PnlDurumBar.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#EAB308');
+        }
+        else
+        {
+          PnlDurumBar.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#22C55E');
+        }
+        PnlDurumBar.SetclProSettings(PnlDurumBar.clProSettings);
+
+        BtnIslem = MyForm.AddNewProButton(PnlItem, 'BI_' + Sfx, '');
+        BtnIslem.Align = alCenter;
+        BtnIslem.Width = 85;
+        BtnIslem.Margins.Right = 10;
+        BtnIslem.Margins.Top = 25;
+        BtnIslem.Margins.Bottom = 35;
+        if (DurumCode == '0')
+        {
+          BtnIslem.Text = 'TESLIM ET';
+          StyleButton(BtnIslem, '#2563EB', '#FFFFFF', 11, 8);
+        }
+        else
+        {
+          BtnIslem.Text = 'SIL';
+          StyleButton(BtnIslem, '#EF4444', '#FFFFFF', 11, 8);
+        }
+        BtnIslem.clTagStr = KayitID;
+        BtnIslem.clTagInt = StrToInt(DurumCode);
+        MyForm.AddNewEvent(BtnIslem, tbeOnClick, 'OnBtnIslemClick');
+
+        LblPlaka = MyForm.AddNewProLabel(PnlItem, 'LP_' + Sfx, QryMain.FieldByName('Plaka').AsString);
+        LblPlaka.Align = alTop;
+        LblPlaka.Height = 28;
+        LblPlaka.Margins.Left = 14;
+        LblPlaka.Margins.Top = 10;
+        StyleLabel(LblPlaka, 17, '#1E293B', True);
+
+        LblDetay = MyForm.AddNewProLabel(PnlItem, 'LD_' + Sfx,
+          QryMain.FieldByName('Musteri').AsString + ' - ' +
+          QryMain.FieldByName('Model').AsString + ' - ' +
+          QryMain.FieldByName('Paket').AsString);
+        LblDetay.Align = alTop;
+        LblDetay.Height = 18;
+        LblDetay.Margins.Left = 14;
+        LblDetay.Margins.Top = 2;
+        StyleLabel(LblDetay, 12, '#64748B', False);
+
+        LblFiyat = MyForm.AddNewProLabel(PnlItem, 'LF_' + Sfx, QryMain.FieldByName('Ucret').AsString + ' TL');
+        LblFiyat.Align = alTop;
+        LblFiyat.Height = 18;
+        LblFiyat.Margins.Left = 14;
+        LblFiyat.Margins.Top = 2;
+        StyleLabel(LblFiyat, 14, '#2563EB', True);
+
+        LblTarih = MyForm.AddNewProLabel(PnlItem, 'LT_' + Sfx, TarihStr);
+        LblTarih.Align = alTop;
+        LblTarih.Height = 16;
+        LblTarih.Margins.Left = 14;
+        LblTarih.Margins.Top = 2;
+        StyleLabel(LblTarih, 10, '#94A3B8', False);
+
+        QryMain.Next;
+      }
+    }
+  except
+    ShowMessage('Liste hatasi: ' + LastExceptionMessage);
+  }
+
+  if (Cnt == 0)
+  {
+    LblEmpty = MyForm.AddNewProLabel(ListScroll, 'LblEmptyList_' + IntToStr(RenderNo), 'Kayit bulunamadi');
+    LblEmpty.Align = alTop;
+    LblEmpty.Height = 60;
+    LblEmpty.Margins.Top = 20;
+    LblEmpty.clProSettings.FontHorzAlign = palCenter;
+    LblEmpty.clProSettings.FontVertAlign = palCenter;
+    StyleLabel(LblEmpty, 14, '#94A3B8', False);
+  }
+
+  UpdateStats;
+}
+
+// ---------------------------------------------------------------
+// Onayli islemler
+// ---------------------------------------------------------------
+void OnAskNo;
+{
+  PendingID = '';
+}
+
+void DoDeliverJob;
+var JobId: Integer;
+{
+  JobId = StrToIntDef(PendingID, 0);
+  if (JobId <= 0)
+  {
+    ShowMessage('Kayit secilemedi, tekrar deneyin');
+    Exit;
+  }
+  if (not Clomosy.DBSQLiteExec('UPDATE TBL_JOBS SET Durum = 1, TeslimTarihi = ' +
+    QuotedStr(FormatDateTime('yyyy-mm-dd hh:nn', Now)) + ' WHERE ID = ' + IntToStr(JobId)))
+  {
+    ShowMessage('Teslim hatasi: ' + Clomosy.DBLastError);
+    Exit;
+  }
+  PendingID = '';
+  RefreshList;
+}
+
+void DoDeleteJob;
+var JobId: Integer;
+{
+  JobId = StrToIntDef(PendingID, 0);
+  if (JobId <= 0)
+  {
+    ShowMessage('Kayit secilemedi, tekrar deneyin');
+    Exit;
+  }
+  if (not Clomosy.DBSQLiteExec('DELETE FROM TBL_JOBS WHERE ID = ' + IntToStr(JobId)))
+  {
+    ShowMessage('Silme hatasi: ' + Clomosy.DBLastError);
+    Exit;
+  }
+  PendingID = '';
+  RefreshList;
+}
+
+void OnBtnIslemClick;
+var Btn: TclProButton;
+{
+  Btn = TclProButton(MyForm.clSender);
+  PendingID = Btn.clTagStr;
+
+  if (Btn.Text == 'TESLIM ET')
+  {
+    if (Clomosy.PlatformIsMobile)
+    {
+      Clomosy.AskAndCall('Arac teslim edilsin mi?', 'DoDeliverJob', 'OnAskNo');
+    }
+    else
+    {
+      if (Clomosy.Ask('Arac teslim edilsin mi?'))
+      {
+        DoDeliverJob;
+      }
+      else
+      {
+        OnAskNo;
+      }
+    }
+  }
+  else
+  {
+    if (Clomosy.PlatformIsMobile)
+    {
+      Clomosy.AskAndCall('Kayit silinsin mi?', 'DoDeleteJob', 'OnAskNo');
+    }
+    else
+    {
+      if (Clomosy.Ask('Kayit silinsin mi?'))
+      {
+        DoDeleteJob;
+      }
+      else
+      {
+        OnAskNo;
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------
+// Paket ve filtre secimleri
+// ---------------------------------------------------------------
+void ApplyPkg(Idx: Integer);
+{
+  SetChipStyle(BtnPkg1, False);
+  SetChipStyle(BtnPkg2, False);
+  SetChipStyle(BtnPkg3, False);
+  if (Idx == 1)
+  {
+    SelectedPkgName = 'Dis Yikama';
+    SelectedPkgPrice = '150';
+    SetChipStyle(BtnPkg1, True);
+  }
+  else if (Idx == 2)
+  {
+    SelectedPkgName = 'Ic-Dis';
+    SelectedPkgPrice = '250';
+    SetChipStyle(BtnPkg2, True);
+  }
+  else
+  {
+    SelectedPkgName = 'Seramik Kaplama';
+    SelectedPkgPrice = '3000';
+    SetChipStyle(BtnPkg3, True);
+  }
+}
+
+void OnPkgClick;
+var Btn: TclProButton;
+{
+  Btn = TclProButton(MyForm.clSender);
+  ApplyPkg(Btn.clTagInt);
+}
+
+void UpdateFilterChips;
+{
+  SetChipStyle(BtnFltAll, False);
+  SetChipStyle(BtnFltBekl, False);
+  SetChipStyle(BtnFltTam, False);
+  if (FilterDurum == -1)
+  {
+    SetChipStyle(BtnFltAll, True);
+  }
+  else if (FilterDurum == 0)
+  {
+    SetChipStyle(BtnFltBekl, True);
+  }
+  else
+  {
+    SetChipStyle(BtnFltTam, True);
+  }
+}
+
+void OnFilterAll;
+{
+  FilterDurum = -1;
+  UpdateFilterChips;
+  RefreshList;
+}
+
+void OnFilterBekl;
+{
+  FilterDurum = 0;
+  UpdateFilterChips;
+  RefreshList;
+}
+
+void OnFilterTam;
+{
+  FilterDurum = 1;
+  UpdateFilterChips;
+  RefreshList;
+}
+
+// ---------------------------------------------------------------
+// Sekmeler
+// ---------------------------------------------------------------
+void UpdateTabIndicators;
+{
+  SetTabState(PnlTabIndicator1, BtnTabNew, False, '#2563EB');
+  SetTabState(PnlTabIndicator2, BtnTabList, False, '#2563EB');
+
+  PnlRegisterView.Visible = False;
+  PnlListView.Visible = False;
+
+  if (AktifSekmeIndex == 1)
+  {
+    SetTabState(PnlTabIndicator1, BtnTabNew, True, '#2563EB');
+    PnlRegisterView.Visible = True;
+  }
+  else
+  {
+    SetTabState(PnlTabIndicator2, BtnTabList, True, '#2563EB');
+    PnlListView.Visible = True;
+  }
+}
+
+void GoRegister;
+{
+  AktifSekmeIndex = 1;
+  UpdateTabIndicators;
+}
+
+void GoList;
+{
+  AktifSekmeIndex = 2;
+  UpdateTabIndicators;
+  RefreshList;
+}
+
+void SaveVehicle;
+var
+  PlakaVal: String;
+  QryChk: TclSQLiteQuery;
+{
+  PlakaVal = UpperCase(Trim(EdtPlaka.Text));
+  if (PlakaVal == '')
+  {
+    ShowMessage('Plaka giriniz');
+    Exit;
+  }
+  if (SelectedPkgName == '')
+  {
+    ShowMessage('Paket seciniz');
+    Exit;
+  }
+
+  try
+    QryChk = Clomosy.DBSQLiteQueryWith('SELECT COUNT(*) AS Cnt FROM TBL_JOBS WHERE Durum = 0 AND Plaka = ' + QuotedStr(PlakaVal));
+    QryChk.OpenOrExecute;
+    if (QryChk.FieldByName('Cnt').AsInteger > 0)
+    {
+      ShowMessage('Bu plaka zaten bekleyen araclar arasinda');
+      Exit;
+    }
+  except
+    ShowMessage('Kontrol hatasi: ' + LastExceptionMessage);
+    Exit;
+  }
+
+  if (not Clomosy.DBSQLiteExec('INSERT INTO TBL_JOBS (Plaka, Musteri, Model, Telefon, Paket, Ucret, Durum, Tarih) VALUES (' +
+    QuotedStr(PlakaVal) + ', ' +
+    QuotedStr(Trim(EdtMusteri.Text)) + ', ' +
+    QuotedStr(Trim(EdtModel.Text)) + ', ' +
+    QuotedStr(Trim(EdtPhone.Text)) + ', ' +
+    QuotedStr(SelectedPkgName) + ', ' +
+    QuotedStr(SelectedPkgPrice) + ', 0, ' +
+    QuotedStr(FormatDateTime('dd.mm.yyyy hh:nn', Now)) + ')'))
+  {
+    ShowMessage('Kayit hatasi: ' + Clomosy.DBLastError);
+    Exit;
+  }
+
+  EdtPlaka.Text = '';
+  EdtMusteri.Text = '';
+  EdtModel.Text = '';
+  EdtPhone.Text = '';
+  MyForm.clVKVisible = False;
+  ApplyPkg(2);
+  GoList;
+}
+
+// ---------------------------------------------------------------
+// Arayuz kurulumu
+// ---------------------------------------------------------------
+void InitPkgBtn(Btn: TclProButton; Idx: Integer);
+{
+  Btn.Align = alTop;
+  Btn.Height = 44;
+  Btn.Margins.Top = 4;
+  Btn.Margins.Left = 16;
+  Btn.Margins.Right = 16;
+  Btn.clProSettings.IsFill = True;
+  Btn.clProSettings.IsRound = True;
+  Btn.clProSettings.RoundWidth = 10;
+  Btn.clProSettings.RoundHeight = 10;
+  Btn.clProSettings.FontSize = 13;
+  Btn.SetclProSettings(Btn.clProSettings);
+  Btn.clTagInt = Idx;
+  MyForm.AddNewEvent(Btn, tbeOnClick, 'OnPkgClick');
+}
+
+void InitTabBtn(Btn: TclProButton; EventName: String);
+{
+  Btn.Align = alClient;
+  Btn.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  Btn.clProSettings.IsFill = True;
+  Btn.clProSettings.FontSize = 12;
+  Btn.clProSettings.FontWeight = 1;
+  Btn.clProSettings.BorderWidth = 0;
+  Btn.SetclProSettings(Btn.clProSettings);
+  MyForm.AddNewEvent(Btn, tbeOnClick, EventName);
+}
+
+void InitTabIndicator(Ind: TclProPanel);
+{
+  Ind.Align = alTop;
+  Ind.Height = 3;
+  Ind.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#E2E8F0');
+  Ind.clProSettings.IsFill = True;
+  Ind.SetclProSettings(Ind.clProSettings);
+}
+
+void InitFilterBtn(Btn: TclProButton; EventName: String);
+{
+  Btn.Align = alLeft;
+  Btn.Width = (MyForm.clWidth - 36) / 3;
+  Btn.Margins.Right = 8;
+  Btn.clProSettings.IsFill = True;
+  Btn.clProSettings.IsRound = True;
+  Btn.clProSettings.RoundWidth = 10;
+  Btn.clProSettings.RoundHeight = 10;
+  Btn.clProSettings.FontSize = 12;
+  Btn.SetclProSettings(Btn.clProSettings);
+  MyForm.AddNewEvent(Btn, tbeOnClick, EventName);
+}
+
+void InitStatCard(Pnl: TclProPanel; TagLbl: TclProLabel; ValLbl: TclProLabel; TagText: String; ValText: String; Accent: String);
+{
+  StyleCard(Pnl, 10);
+
+  TagLbl.Text = TagText;
+  TagLbl.Align = alTop;
+  TagLbl.Height = 18;
+  TagLbl.Margins.Left = 8;
+  TagLbl.Margins.Top = 10;
+  StyleLabel(TagLbl, 10, '#94A3B8', True);
+
+  ValLbl.Text = ValText;
+  ValLbl.Align = alClient;
+  ValLbl.Margins.Left = 8;
+  ValLbl.clProSettings.FontVertAlign = palCenter;
+  StyleLabel(ValLbl, 20, Accent, True);
+}
+
+void SetupUI;
+var LblPkgTitle: TclProLabel;
+{
+  MyForm = TclForm.Create(Self);
+  MyForm.SetFormColor('#F1F5F9', '#F1F5F9', clGCross);
+  AktifSekmeIndex = 1;
+  FilterDurum = -1;
+
+  // ----- Ust baslik -----
+  PnlHeader = MyForm.AddNewProPanel(MyForm, 'PnlHeader');
+  PnlHeader.Align = alTop;
+  PnlHeader.Height = 64;
+  PnlHeader.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#0F172A');
+  PnlHeader.clProSettings.IsFill = True;
+  PnlHeader.SetclProSettings(PnlHeader.clProSettings);
+
+  LblTitle = MyForm.AddNewProLabel(PnlHeader, 'LblTitle', 'Oto Yikama Pro');
+  LblTitle.Align = alLeft;
+  LblTitle.Margins.Left = 16;
+  LblTitle.Width = 160;
+  LblTitle.clProSettings.FontVertAlign = palCenter;
+  StyleLabel(LblTitle, 18, '#FFFFFF', True);
+
+  LblDate = MyForm.AddNewProLabel(PnlHeader, 'LblDate', FormatDateTime('dd.mm.yyyy', Now));
+  LblDate.Align = alRight;
+  LblDate.Width = 100;
+  LblDate.Margins.Right = 16;
+  LblDate.clProSettings.FontVertAlign = palCenter;
+  LblDate.clProSettings.FontHorzAlign = palTrailing;
+  StyleLabel(LblDate, 12, '#94A3B8', False);
+
+  // ----- Istatistik kartlari -----
+  PnlStats = MyForm.AddNewProPanel(MyForm, 'PnlStats');
+  PnlStats.Align = alTop;
+  PnlStats.Height = 80;
+  PnlStats.Margins.Top = 10;
+  PnlStats.Margins.Left = 10;
+  PnlStats.Margins.Right = 10;
+  PnlStats.clProSettings.IsFill = False;
+  PnlStats.SetclProSettings(PnlStats.clProSettings);
+
+  PnlStatBekleyen = MyForm.AddNewProPanel(PnlStats, 'PnlSB');
+  PnlStatBekleyen.Align = alLeft;
+  PnlStatBekleyen.Width = (MyForm.clWidth - 30) / 3;
+  PnlStatBekleyen.Margins.Right = 5;
+  LblStatBeklTag = MyForm.AddNewProLabel(PnlStatBekleyen, 'LSBT', '');
+  LblStatBeklVal = MyForm.AddNewProLabel(PnlStatBekleyen, 'LSBV', '0');
+  InitStatCard(PnlStatBekleyen, LblStatBeklTag, LblStatBeklVal, 'BEKLEYEN', '0', '#EAB308');
+
+  PnlStatTamamlanan = MyForm.AddNewProPanel(PnlStats, 'PnlST');
+  PnlStatTamamlanan.Align = alLeft;
+  PnlStatTamamlanan.Width = (MyForm.clWidth - 30) / 3;
+  PnlStatTamamlanan.Margins.Right = 5;
+  LblStatTamTag = MyForm.AddNewProLabel(PnlStatTamamlanan, 'LSTT', '');
+  LblStatTamVal = MyForm.AddNewProLabel(PnlStatTamamlanan, 'LSTV', '0');
+  InitStatCard(PnlStatTamamlanan, LblStatTamTag, LblStatTamVal, 'TAMAMLANAN', '0', '#22C55E');
+
+  PnlStatCiro = MyForm.AddNewProPanel(PnlStats, 'PnlSC');
+  PnlStatCiro.Align = alClient;
+  LblStatCiroTag = MyForm.AddNewProLabel(PnlStatCiro, 'LSCT', '');
+  LblStatCiroVal = MyForm.AddNewProLabel(PnlStatCiro, 'LSCV', '0 TL');
+  InitStatCard(PnlStatCiro, LblStatCiroTag, LblStatCiroVal, 'BUGUN CIRO', '0 TL', '#2563EB');
+
+  // ----- Alt sekme cubugu (2 sekme) -----
+  PnlFooter = MyForm.AddNewProPanel(MyForm, 'PnlFooter');
+  PnlFooter.Align = alBottom;
+  PnlFooter.Height = 56;
+  PnlFooter.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  PnlFooter.clProSettings.IsFill = True;
+  PnlFooter.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  PnlFooter.clProSettings.BorderWidth = 1;
+  PnlFooter.SetclProSettings(PnlFooter.clProSettings);
+
+  PnlTabCol1 = MyForm.AddNewProPanel(PnlFooter, 'PnlTabCol1');
+  PnlTabCol1.Align = alLeft;
+  PnlTabCol1.Width = MyForm.clWidth / 2;
+  PnlTabCol1.clProSettings.IsTransparent = True;
+  PnlTabCol1.SetclProSettings(PnlTabCol1.clProSettings);
+  PnlTabIndicator1 = MyForm.AddNewProPanel(PnlTabCol1, 'PTI1');
+  InitTabIndicator(PnlTabIndicator1);
+  BtnTabNew = MyForm.AddNewProButton(PnlTabCol1, 'BtnTabNew', 'Yeni +');
+  InitTabBtn(BtnTabNew, 'GoRegister');
+
+  PnlTabCol2 = MyForm.AddNewProPanel(PnlFooter, 'PnlTabCol2');
+  PnlTabCol2.Align = alClient;
+  PnlTabCol2.clProSettings.IsTransparent = True;
+  PnlTabCol2.SetclProSettings(PnlTabCol2.clProSettings);
+  PnlTabIndicator2 = MyForm.AddNewProPanel(PnlTabCol2, 'PTI2');
+  InitTabIndicator(PnlTabIndicator2);
+  BtnTabList = MyForm.AddNewProButton(PnlTabCol2, 'BtnTabList', 'Araclar');
+  InitTabBtn(BtnTabList, 'GoList');
+
+  // ----- Icerik alani -----
+  PnlContent = MyForm.AddNewProPanel(MyForm, 'PnlContent');
+  PnlContent.Align = alClient;
+  PnlContent.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F1F5F9');
+  PnlContent.clProSettings.IsFill = True;
+  PnlContent.SetclProSettings(PnlContent.clProSettings);
+
+  // ===== 1) Yeni kayit =====
+  PnlRegisterView = MyForm.AddNewProPanel(PnlContent, 'PnlRegisterView');
+  PnlRegisterView.Align = alClient;
+  PnlRegisterView.Margins.Top = 10;
+  PnlRegisterView.Margins.Left = 10;
+  PnlRegisterView.Margins.Right = 10;
+  PnlRegisterView.Margins.Bottom = 10;
+  StyleCard(PnlRegisterView, 14);
+
+  EdtPlaka = MyForm.AddNewProEdit(PnlRegisterView, 'EdtPlaka', 'Plaka (34 AB 123)');
+  EdtPlaka.Align = alTop;
+  EdtPlaka.Height = 48;
+  EdtPlaka.Margins.Top = 18;
+  EdtPlaka.Margins.Left = 16;
+  EdtPlaka.Margins.Right = 16;
+  EdtPlaka.clProSettings.FontSize = 16;
+  StyleInput(EdtPlaka);
+
+  EdtMusteri = MyForm.AddNewProEdit(PnlRegisterView, 'EdtMusteri', 'Musteri Adi');
+  EdtMusteri.Align = alTop;
+  EdtMusteri.Height = 48;
+  EdtMusteri.Margins.Top = 8;
+  EdtMusteri.Margins.Left = 16;
+  EdtMusteri.Margins.Right = 16;
+  StyleInput(EdtMusteri);
+
+  Lyt1 = MyForm.AddNewLayout(PnlRegisterView, 'Lyt1');
+  Lyt1.Align = alTop;
+  Lyt1.Height = 55;
+  Lyt1.Margins.Top = 8;
+
+  EdtModel = MyForm.AddNewProEdit(Lyt1, 'EdtModel', 'Model');
+  EdtModel.Align = alLeft;
+  EdtModel.Width = (MyForm.clWidth - 50) / 2;
+  EdtModel.Margins.Left = 16;
+  EdtModel.Height = 48;
+  StyleInput(EdtModel);
+
+  EdtPhone = MyForm.AddNewProEdit(Lyt1, 'EdtPhone', 'Telefon');
+  EdtPhone.Align = alClient;
+  EdtPhone.Margins.Left = 8;
+  EdtPhone.Margins.Right = 16;
+  EdtPhone.Height = 48;
+  StyleInput(EdtPhone);
+
+  LblPkgTitle = MyForm.AddNewProLabel(PnlRegisterView, 'lblPkg', 'PAKET SECIMI');
+  LblPkgTitle.Align = alTop;
+  LblPkgTitle.Height = 22;
+  LblPkgTitle.Margins.Top = 14;
+  LblPkgTitle.Margins.Left = 16;
+  StyleLabel(LblPkgTitle, 11, '#64748B', True);
+
+  BtnPkg1 = MyForm.AddNewProButton(PnlRegisterView, 'BtnPkg1', 'Dis Yikama  -  150 TL');
+  InitPkgBtn(BtnPkg1, 1);
+  BtnPkg2 = MyForm.AddNewProButton(PnlRegisterView, 'BtnPkg2', 'Ic + Dis Yikama  -  250 TL');
+  InitPkgBtn(BtnPkg2, 2);
+  BtnPkg3 = MyForm.AddNewProButton(PnlRegisterView, 'BtnPkg3', 'Seramik Kaplama  -  3000 TL');
+  InitPkgBtn(BtnPkg3, 3);
+
+  BtnSave = MyForm.AddNewProButton(PnlRegisterView, 'BtnSave', 'KAYDET');
+  BtnSave.Align = alBottom;
+  BtnSave.Height = 50;
+  BtnSave.Margins.Left = 16;
+  BtnSave.Margins.Right = 16;
+  BtnSave.Margins.Bottom = 16;
+  StyleButton(BtnSave, '#2563EB', '#FFFFFF', 16, 12);
+  MyForm.AddNewEvent(BtnSave, tbeOnClick, 'SaveVehicle');
+
+  ApplyPkg(2);
+
+  // ===== 2) Arac listesi =====
+  PnlListView = MyForm.AddNewProPanel(PnlContent, 'PnlListView');
+  PnlListView.Align = alClient;
+  PnlListView.Visible = False;
+  PnlListView.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F1F5F9');
+  PnlListView.clProSettings.IsFill = True;
+  PnlListView.SetclProSettings(PnlListView.clProSettings);
+
+  EdtSearch = MyForm.AddNewProSearchEdit(PnlListView, 'EdtSearch', 'Plaka Ara...');
+  EdtSearch.Align = alTop;
+  EdtSearch.Height = 44;
+  EdtSearch.Margins.Top = 10;
+  EdtSearch.Margins.Left = 10;
+  EdtSearch.Margins.Right = 10;
+  EdtSearch.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  EdtSearch.clProSettings.RoundWidth = 10;
+  EdtSearch.clProSettings.RoundHeight = 10;
+  EdtSearch.clProSettings.BorderColor = clAlphaColor.clHexToColor('#CBD5E1');
+  EdtSearch.clProSettings.BorderWidth = 1;
+  EdtSearch.SetclProSettings(EdtSearch.clProSettings);
+  MyForm.AddNewEvent(EdtSearch, tbeOnChange, 'RefreshList');
+
+  Lyt3 = MyForm.AddNewLayout(PnlListView, 'Lyt3');
+  Lyt3.Align = alTop;
+  Lyt3.Height = 40;
+  Lyt3.Margins.Top = 8;
+  Lyt3.Margins.Left = 10;
+  Lyt3.Margins.Right = 10;
+
+  BtnFltAll = MyForm.AddNewProButton(Lyt3, 'BtnFltAll', 'Tumu');
+  InitFilterBtn(BtnFltAll, 'OnFilterAll');
+  BtnFltBekl = MyForm.AddNewProButton(Lyt3, 'BtnFltBekl', 'Bekleyen');
+  InitFilterBtn(BtnFltBekl, 'OnFilterBekl');
+  BtnFltTam = MyForm.AddNewProButton(Lyt3, 'BtnFltTam', 'Teslim');
+  InitFilterBtn(BtnFltTam, 'OnFilterTam');
+  BtnFltTam.Align = alClient;
+  BtnFltTam.Margins.Right = 0;
+
+  UpdateTabIndicators;
+  UpdateFilterChips;
+  UpdateStats;
+  MyForm.Run;
+}
+
+{
+  RenderNo = 0;
+  PendingID = '';
+  SetupDB;
+  if (DbOk)
+  {
+    SetupUI;
+  }
+}
