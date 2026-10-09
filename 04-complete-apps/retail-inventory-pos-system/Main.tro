@@ -1,0 +1,298 @@
+var
+  MyForm: TclForm;
+  MainScroll: TclVertScrollBox;
+  HeaderPanel: TclProPanel;
+  HeaderTitle: TclPRoLabel;
+  BtnMenuAc: TclProButton;
+
+  BackdropPnl: TclProPanel;
+  SheetPnl: TclProPanel;
+  HandlePnl: TclProPanel;
+  SheetContent: TclVertScrollBox;
+  SheetTimer: TclTimer;
+  IsSheetOpen: Boolean;
+  SheetHeight: Integer;
+  TargetHeight: Integer;
+  SheetStep: Integer;
+
+  Sc: Double;
+  ScreenW: Integer;
+  ScreenH: Integer;
+
+void StokGit;
+{
+  Clomosy.RunUnit('UDepo');
+}
+
+void SatisGit;
+{
+  Clomosy.RunUnit('USatis');
+}
+
+void GecmisGit;
+{
+  Clomosy.RunUnit('USatisGecmisi');
+}
+
+void CalcScale;
+{
+  ScreenW = MyForm.clWidth;
+  ScreenH = MyForm.clHeight;
+  Sc = ScreenW / 390;
+  if (Sc < 0.85) { Sc = 0.85; }
+  if (Sc > 1.4)  { Sc = 1.4; }
+}
+
+void UpdateSheetLayout;
+{
+  CalcScale;
+
+  TargetHeight = (4 * 73 + 36 + 20) * Sc;
+
+  if (TargetHeight > ScreenH * 0.7)
+  {
+    TargetHeight = ScreenH * 0.7;
+  }
+
+  SheetStep = TargetHeight / 8;
+  if (SheetStep < 10) { SheetStep = 10; }
+
+  HandlePnl.Margins.Left = (ScreenW / 2) - 30;
+  HandlePnl.Margins.Right = (ScreenW / 2) - 30;
+}
+
+void OnSheetAnim;
+{
+  if (IsSheetOpen)
+  {
+    SheetHeight = SheetHeight + SheetStep;
+    if (SheetHeight >= TargetHeight)
+    {
+      SheetHeight = TargetHeight;
+      SheetTimer.Enabled = False;
+    }
+  }
+  else
+  {
+    SheetHeight = SheetHeight - SheetStep;
+    if (SheetHeight <= 0)
+    {
+      SheetHeight = 0;
+      SheetTimer.Enabled = False;
+      BackdropPnl.Visible = False;
+      SheetPnl.Visible = False;
+    }
+  }
+  SheetPnl.Height = SheetHeight;
+}
+
+void ToggleSheet;
+{
+  if (IsSheetOpen)
+  {
+    IsSheetOpen = False;
+  }
+  else
+  {
+    UpdateSheetLayout;
+    IsSheetOpen = True;
+    BackdropPnl.Visible = True;
+    SheetPnl.Visible = True;
+    clRTMethod(BackdropPnl,'BringToFront');
+    clRTMethod(SheetPnl,'BringToFront');
+  }
+  SheetTimer.Enabled = True;
+}
+
+void AddSheetItem(Index: Integer; Icon: String; Title: String; ClickProc: String);
+var
+  ItemPnl: TclProPanel;
+  LblIcon, LblTitle: TClProLabel;
+  IDStr: String;
+{
+  IDStr = IntToStr(Index);
+  ItemPnl = MyForm.AddNewProPanel(SheetContent, 'Item_' + IDStr);
+  ItemPnl.Align = alTop;
+  ItemPnl.Height = 65 * Sc;
+  ItemPnl.Margins.Bottom = 8;
+  ItemPnl.clProSettings.BackgroundColor = clAlphaColor.clWhite;
+  ItemPnl.clProSettings.IsFill = True;
+  ItemPnl.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  ItemPnl.clProSettings.BorderWidth = 1;
+  ItemPnl.clProSettings.RoundWidth = 12;
+  ItemPnl.clProSettings.RoundHeight = 12;
+  ItemPnl.SetclProSettings(ItemPnl.clProSettings);
+
+  MyForm.AddNewEvent(ItemPnl, tbeOnClick, ClickProc);
+
+  LblIcon = MyForm.AddNewProLabel(ItemPnl, 'Icon_' + IDStr, Icon);
+  LblIcon.Align = alLeft;
+  LblIcon.Width = 60 * Sc;
+  LblIcon.clProSettings.FontSize = 24 * Sc;
+  LblIcon.clProSettings.FontVertAlign = palCenter;
+  LblIcon.clProSettings.FontHorzAlign = palCenter;
+  LblIcon.SetclProSettings(LblIcon.clProSettings);
+
+  LblTitle = MyForm.AddNewProLabel(ItemPnl, 'Title_' + IDStr, Title);
+  LblTitle.Align = alClient;
+  LblTitle.clProSettings.FontSize = 16 * Sc;
+  LblTitle.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E293B');
+  LblTitle.clProSettings.FontVertAlign = palCenter;
+  LblTitle.clProSettings.TextSettings.Font.Style = [fsBold];
+  LblTitle.SetclProSettings(LblTitle.clProSettings);
+
+  LblIcon.HitTest = False;
+  LblTitle.HitTest = False;
+}
+
+void CreateDashboardCard(ParentPnl: TclVertScrollBox; CardName: String; Title: String; SubTitle: String; IconEmoji: String; BorderColorHex: String; ClickEventName: String);
+var
+  CardPanel: TclProPanel;
+  LblIcon, LblTitle, LblDesc: TclProLabel;
+{
+  CardPanel = MyForm.AddNewProPanel(ParentPnl, CardName);
+  CardPanel.Align = alTop;
+  CardPanel.Height = 110 * Sc;
+  CardPanel.Margins.Top = 15;
+  CardPanel.Margins.Left = 20;
+  CardPanel.Margins.Right = 20;
+  CardPanel.clProSettings.BackgroundColor = clAlphaColor.clWhite;
+  CardPanel.clProSettings.IsFill = True;
+  CardPanel.clProSettings.BorderColor = clAlphaColor.clHexToColor(BorderColorHex);
+  CardPanel.clProSettings.BorderWidth = 2;
+  CardPanel.clProSettings.RoundWidth = 16;
+  CardPanel.clProSettings.RoundHeight = 16;
+  CardPanel.SetclProSettings(CardPanel.clProSettings);
+  MyForm.AddNewEvent(CardPanel, tbeOnClick, ClickEventName);
+
+  LblIcon = MyForm.AddNewProLabel(CardPanel, CardName + '_Icon', IconEmoji);
+  LblIcon.Align = alLeft;
+  LblIcon.Width = 80 * Sc;
+  LblIcon.clProSettings.FontSize = 36 * Sc;
+  LblIcon.clProSettings.FontVertAlign = palCenter;
+  LblIcon.clProSettings.FontHorzAlign = palCenter;
+  LblIcon.SetclProSettings(LblIcon.clProSettings);
+  LblIcon.HitTest = False;
+
+  LblTitle = MyForm.AddNewProLabel(CardPanel, CardName + '_Title', Title);
+  LblTitle.Align = alTop;
+  LblTitle.Height = 35 * Sc;
+  LblTitle.Margins.Left = 10;
+  LblTitle.Margins.Top = 20 * Sc;
+  LblTitle.clProSettings.FontSize = 18 * Sc;
+  LblTitle.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E293B');
+  LblTitle.clProSettings.TextSettings.Font.Style = [fsBold];
+  LblTitle.clProSettings.FontVertAlign = palLeading;
+  LblTitle.SetclProSettings(LblTitle.clProSettings);
+  LblTitle.HitTest = False;
+
+  LblDesc = MyForm.AddNewProLabel(CardPanel, CardName + '_Desc', SubTitle);
+  LblDesc.Align = alClient;
+  LblDesc.Margins.Left = 10;
+  LblDesc.Margins.Top = 5;
+  LblDesc.clProSettings.FontSize = 12 * Sc;
+  LblDesc.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  LblDesc.clProSettings.FontVertAlign = palLeading;
+  LblDesc.SetclProSettings(LblDesc.clProSettings);
+  LblDesc.HitTest = False;
+}
+
+{
+  MyForm = TclForm.Create(Self);
+  MyForm.SetFormColor('#F8FAFC', '#F8FAFC', clGCross);
+
+  CalcScale;
+
+  HeaderPanel = MyForm.AddNewProPanel(MyForm, 'HeaderPanel');
+  HeaderPanel.Align = alTop;
+  HeaderPanel.Height = 75 * Sc;
+  HeaderPanel.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#3B82F6');
+  HeaderPanel.clProSettings.IsFill = True;
+  HeaderPanel.SetclProSettings(HeaderPanel.clProSettings);
+
+  BtnMenuAc = MyForm.AddNewProButton(HeaderPanel, 'BtnMenuAc', '☰');
+  BtnMenuAc.Align = alRight;
+  BtnMenuAc.Width = 50 * Sc;
+  BtnMenuAc.Height = 50 * Sc;
+  BtnMenuAc.Margins.Top = 12 * Sc;
+  BtnMenuAc.Margins.Right = 15;
+  BtnMenuAc.Margins.Bottom = 12 * Sc;
+  BtnMenuAc.clProSettings.BackgroundColor = clAlphaColor.clAlpha;
+  BtnMenuAc.clProSettings.FontColor = clAlphaColor.clWhite;
+  BtnMenuAc.clProSettings.FontSize = 24 * Sc;
+  BtnMenuAc.clProSettings.BorderWidth = 0;
+  BtnMenuAc.SetclProSettings(BtnMenuAc.clProSettings);
+  MyForm.AddNewEvent(BtnMenuAc, tbeOnClick, 'ToggleSheet');
+
+  HeaderTitle = MyForm.AddNewProLabel(HeaderPanel, 'HeaderTitle', 'Stok & Satis Sistemi');
+  HeaderTitle.Align = alClient;
+  HeaderTitle.Margins.Left = 20;
+  HeaderTitle.clProSettings.FontSize = 20 * Sc;
+  HeaderTitle.clProSettings.FontColor = clAlphaColor.clWhite;
+  HeaderTitle.clProSettings.TextSettings.Font.Style = [fsBold];
+  HeaderTitle.clProSettings.FontVertAlign = palCenter;
+  HeaderTitle.clProSettings.FontHorzAlign = palLeading;
+  HeaderTitle.SetclProSettings(HeaderTitle.clProSettings);
+
+  MainScroll = MyForm.AddNewVertScrollBox(MyForm, 'MainScroll');
+  MainScroll.Align = alClient;
+
+  CreateDashboardCard(MainScroll, 'BtnStok', 'Stok Yonetimi', 'Urun ekle, duzenle.', '📦', '#3B82F6', 'StokGit');
+  CreateDashboardCard(MainScroll, 'BtnSatis', 'Satis Ekrani', 'Hizli satis yap.', '🛒', '#10B981', 'SatisGit');
+  CreateDashboardCard(MainScroll, 'BtnGecmis', 'Satis Gecmisi', 'Raporlari incele.', '📊', '#F59E0B', 'GecmisGit');
+
+  SheetHeight = 0;
+  IsSheetOpen = False;
+  TargetHeight = 300;
+  SheetStep = 40;
+
+  BackdropPnl = MyForm.AddNewProPanel(MyForm, 'BackdropPnl');
+  BackdropPnl.Align = alClient;
+  BackdropPnl.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#80000000');
+  BackdropPnl.clProSettings.IsFill = True;
+  BackdropPnl.Visible = False;
+  BackdropPnl.SetclProSettings(BackdropPnl.clProSettings);
+  MyForm.AddNewEvent(BackdropPnl, tbeOnClick, 'ToggleSheet');
+
+  SheetPnl = MyForm.AddNewProPanel(MyForm, 'SheetPnl');
+  SheetPnl.Align = alBottom;
+  SheetPnl.Height = 0;
+  SheetPnl.Visible = False;
+  SheetPnl.clProSettings.BackgroundColor = clAlphaColor.clWhite;
+  SheetPnl.clProSettings.IsFill = True;
+  SheetPnl.clProSettings.RoundHeight = 25;
+  SheetPnl.clProSettings.RoundWidth = 25;
+  SheetPnl.SetclProSettings(SheetPnl.clProSettings);
+
+  HandlePnl = MyForm.AddNewProPanel(SheetPnl, 'HandlePnl');
+  HandlePnl.Align = alTop;
+  HandlePnl.Height = 6;
+  HandlePnl.Width = 60;
+  HandlePnl.Margins.Top = 15;
+  HandlePnl.Margins.Bottom = 15;
+  HandlePnl.Margins.Left = (ScreenW / 2) - 30;
+  HandlePnl.Margins.Right = (ScreenW / 2) - 30;
+  HandlePnl.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#CBD5E1');
+  HandlePnl.clProSettings.IsFill = True;
+  HandlePnl.clProSettings.RoundHeight = 3;
+  HandlePnl.clProSettings.RoundWidth = 3;
+  HandlePnl.SetclProSettings(HandlePnl.clProSettings);
+
+  SheetContent = MyForm.AddNewVertScrollBox(SheetPnl, 'SheetContent');
+  SheetContent.Align = alClient;
+  SheetContent.Margins.Left = 20;
+  SheetContent.Margins.Right = 20;
+
+  AddSheetItem(1, '📦', 'Stok Yonetimi', 'StokGit');
+  AddSheetItem(2, '🛒', 'Satis Ekrani', 'SatisGit');
+  AddSheetItem(3, '📊', 'Satis Gecmisi', 'GecmisGit');
+  AddSheetItem(4, 'X', 'Kapat', 'ToggleSheet');
+
+  UpdateSheetLayout;
+
+  SheetTimer = MyForm.AddNewTimer(MyForm, 'SheetTimer', 15);
+  SheetTimer.Enabled = False;
+  MyForm.AddNewEvent(SheetTimer, tbeOnTimer, 'OnSheetAnim');
+
+  MyForm.Run;
+}
