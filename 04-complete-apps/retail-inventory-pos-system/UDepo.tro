@@ -1,0 +1,566 @@
+var
+  MyForm: TclForm;
+  MainScroll: TclVertScrollBox;   // sadece telefon modunda kullanilir
+  FormScroll: TclVertScrollBox;   // sadece genis ekran modunda sol panelin icinde
+  UstPanel, SolPanel, SagPanel: TclProPanel;
+  PListView: TclProListView;
+  UrunAdiEdt, BarkodEdt, KategoriEdt, FiyatEdt, StokMiktariEdt: TclProEdit;
+  searchEdt: TclProSearchEdit;
+  KaydetBtn, GuncelleBtn, SilBtn, SatisBtn: TclProButton;
+  DPanl: TClProListViewDesignerPanel;
+  UrunLbl, BarkodLbl, KategoriLbl, FiyatLbl, StokMiktarLbl: TClProLabel;
+  ButtonPanel: TclProPanel;
+
+  // yardimci (gecici) nesneler
+  TmpEdt: TclProEdit;
+  TmpBtn: TclProButton;
+
+  // RESPONSIVE degiskenleri
+  IsWide: Boolean;     // True: yan yana (tablet/yatay), False: alt alta (telefon)
+  Sc: Double;          // olcek carpani
+  ScreenW: Integer;
+  ScreenH: Integer;
+  SolW: Integer;       // genis modda sol panel genisligi
+  BtnPanelH: Integer;  // buton panelinin yuksekligi
+  PhoneFormH: Integer; // telefon modunda form panelinin yuksekligi
+
+void SatiseGit;
+{
+  Clomosy.RunUnit('USatis');
+}
+
+void ClearEdtText;
+{
+  UrunAdiEdt.Text = '';
+  BarkodEdt.Text = '';
+  KategoriEdt.Text = '';
+  FiyatEdt.Text = '';
+  StokMiktariEdt.Text = '';
+}
+
+void GetData;
+var
+  Qry: TclSQLiteQuery;
+  SQLText: String;
+{
+  try
+    SQLText = 'Select ''Urun Adi: ''||UrunAdi as UrunLbl, ''Barkod: ''||Barkod as BarkodLbl, ''Kategori: ''||Kategori as KategoriLbl, ''Fiyat: ''||Fiyat as FiyatLbl, ''Stok: ''||StokMiktari as StokMiktarLbl From StokTakip';
+
+    if (searchEdt.Text <> '')
+    {
+      SQLText = SQLText + ' WHERE UrunAdi LIKE ' + QuotedStr('%' + searchEdt.Text + '%');
+    }
+
+    Qry = Clomosy.DBSQLiteQueryWith(SQLText);
+    Qry.OpenOrExecute;
+
+    if (Qry.Found)
+    {
+      PListView.ClLoadProListViewDataFromDataset(Qry);
+    }
+    else
+    {
+      PListView.ClearList;
+    }
+
+  except
+    ShowMessage('Hata: ' + LastExceptionMessage);
+  }
+}
+
+function Sorgula: Boolean;
+{
+  if (BarkodEdt.Text == '')
+  {
+    ShowMessage('Barkod bos olamaz!');
+    Result = False;
+    Exit;
+  }
+
+  Clomosy.DBSQLiteQuery.SQL.Text = 'Select * From StokTakip Where Barkod = ' + QuotedStr(BarkodEdt.Text);
+  Clomosy.DBSQLiteQuery.OpenOrExecute;
+
+  Result = not Clomosy.DBSQLiteQuery.Found;
+}
+
+void DataInsert;
+{
+  if ((UrunAdiEdt.Text == '') || (BarkodEdt.Text == '') || (KategoriEdt.Text == '') || (FiyatEdt.Text == '') || (StokMiktariEdt.Text == ''))
+  {
+    ShowMessage('Zorunlu Alanlari Doldurun.');
+  }
+  else
+  {
+    try
+      if (Sorgula)
+      {
+        Clomosy.DBSQLiteQuery.SQL.Text = 'INSERT INTO StokTakip(UrunAdi, Barkod, Kategori, Fiyat, StokMiktari) VALUES (' +
+          QuotedStr(UrunAdiEdt.Text) + ',' +
+          QuotedStr(BarkodEdt.Text) + ',' +
+          QuotedStr(KategoriEdt.Text) + ',' +
+          QuotedStr(FiyatEdt.Text) + ',' +
+          QuotedStr(StokMiktariEdt.Text) + ')';
+        Clomosy.DBSQLiteQuery.OpenOrExecute;
+        GetData;
+        ClearEdtText;
+        ShowMessage('Urun Eklendi.');
+      }
+      else
+      {
+        ShowMessage('Bu barkod zaten kayitli!');
+      }
+    except
+      ShowMessage('Hata: ' + LastExceptionMessage);
+    }
+  }
+}
+
+void onItemClicked;
+{
+  try
+    UrunAdiEdt.Text = clGetStringAfter(PListView.clSelectedItemData(clText4), ': ');
+    BarkodEdt.Text = clGetStringAfter(PListView.clSelectedItemData(clText), ': ');
+    KategoriEdt.Text = clGetStringAfter(PListView.clSelectedItemData(clText1), ': ');
+    FiyatEdt.Text = clGetStringAfter(PListView.clSelectedItemData(clText2), ': ');
+    StokMiktariEdt.Text = clGetStringAfter(PListView.clSelectedItemData(clText3), ': ');
+  except
+    ShowMessage('Secim hatasi.');
+  }
+}
+
+void DataDelete;
+{
+  try
+    if (BarkodEdt.Text <> '')
+    {
+      Clomosy.DBSQLiteQuery.SQL.Text = 'Delete From StokTakip where Barkod = ' + QuotedStr(BarkodEdt.Text);
+      Clomosy.DBSQLiteQuery.OpenOrExecute;
+      GetData;
+      ClearEdtText;
+      ShowMessage('Urun Silindi.');
+    }
+    else
+    {
+      ShowMessage('Silinecek urun secilmedi!');
+    }
+  except
+    ShowMessage('Hata: ' + LastExceptionMessage);
+  }
+}
+
+void DataUpdate;
+{
+  if ((UrunAdiEdt.Text == '') || (BarkodEdt.Text == '') || (KategoriEdt.Text == '') || (FiyatEdt.Text == '') || (StokMiktariEdt.Text == ''))
+  {
+    ShowMessage('Guncellenecek urun secilmedi!');
+  }
+  else
+  {
+    try
+      Clomosy.DBSQLiteQuery.SQL.Text = 'Update StokTakip Set UrunAdi = ' + QuotedStr(UrunAdiEdt.Text) +
+        ', Kategori = ' + QuotedStr(KategoriEdt.Text) +
+        ', Fiyat = ' + QuotedStr(FiyatEdt.Text) +
+        ', StokMiktari = ' + QuotedStr(StokMiktariEdt.Text) +
+        ' Where Barkod = ' + QuotedStr(BarkodEdt.Text);
+      Clomosy.DBSQLiteQuery.OpenOrExecute;
+      GetData;
+      ClearEdtText;
+      ShowMessage('Urun Guncellendi');
+    except
+      ShowMessage('Hata: ' + LastExceptionMessage);
+    }
+  }
+}
+
+void SqLiteConnectionCreateTable;
+var
+  TableExists: Boolean;
+{
+  try
+    Clomosy.DBSQLiteConnect(Clomosy.appfilespath + 'StokTakip.db', '');
+
+    Clomosy.DBSQLiteQuery.SQL.Text = 'SELECT name FROM sqlite_master WHERE type="table" AND name="StokTakip"';
+    Clomosy.DBSQLiteQuery.OpenOrExecute;
+    TableExists = not Clomosy.DBSQLiteQuery.Eof;
+
+    if not (TableExists)
+    {
+      Clomosy.DBSQLiteQuery.SQL.Text = 'CREATE TABLE StokTakip (' +
+        'UrunAdi TEXT NOT NULL, ' +
+        'Barkod TEXT NOT NULL UNIQUE, ' +
+        'Kategori TEXT NOT NULL, ' +
+        'Fiyat TEXT NOT NULL, ' +
+        'StokMiktari TEXT NOT NULL)';
+      Clomosy.DBSQLiteQuery.OpenOrExecute;
+    }
+
+    Clomosy.DBSQLiteQuery.SQL.Text = 'SELECT name FROM sqlite_master WHERE type="table" AND name="SatisGecmisi"';
+    Clomosy.DBSQLiteQuery.OpenOrExecute;
+    TableExists = not Clomosy.DBSQLiteQuery.Eof;
+
+    if not (TableExists)
+    {
+      Clomosy.DBSQLiteQuery.SQL.Text = 'CREATE TABLE SatisGecmisi (' +
+        'SatisID INTEGER PRIMARY KEY AUTOINCREMENT, ' +
+        'IslemNo TEXT, ' +
+        'Tarih TEXT, ' +
+        'Barkod TEXT, ' +
+        'UrunAdi TEXT, ' +
+        'Miktar INTEGER, ' +
+        'Tutar TEXT)';
+      Clomosy.DBSQLiteQuery.OpenOrExecute;
+    }
+
+  except
+    ShowMessage('Baglanti Hatasi: ' + LastExceptionMessage);
+  }
+}
+
+// ---------------------------------------------------------------
+// RESPONSIVE YARDIMCILAR
+// ---------------------------------------------------------------
+
+// Ekran olcusune gore mod (yan yana / alt alta) ve olcek carpanini belirler
+void CalcLayout;
+{
+  ScreenW = MyForm.clWidth;
+  ScreenH = MyForm.clHeight;
+  IsWide = (ScreenW >= 600);
+
+  if (IsWide)
+  {
+    Sc = 1;
+    if (ScreenH < 500) { Sc = 0.85; }    // yatay telefon
+    if (ScreenW >= 1000) { Sc = 1.1; }   // genis tablet / masaustu
+
+    // Sol panel: ekranin %35'i, 300 ile 420 arasi
+    SolW = ScreenW * 0.35;
+    if (SolW < 300) { SolW = 300; }
+    if (SolW > 420) { SolW = 420; }
+  }
+  else
+  {
+    Sc = ScreenW / 390;
+    if (Sc < 0.85) { Sc = 0.85; }
+    if (Sc > 1.25) { Sc = 1.25; }
+    SolW = ScreenW;
+  }
+
+  // 3 buton (45 + 8 margin) + Satisa Git butonu (50) + ic bosluk
+  BtnPanelH = (3 * (45 * Sc + 8)) + (50 * Sc) + 20;
+
+  // Telefon modunda form paneli: 5 edit + buton paneli + bosluklar
+  PhoneFormH = (5 * (50 * Sc + 10)) + BtnPanelH + 50;
+}
+
+// Form alani (edit) olusturur; sonucu TmpEdt'e koyar
+void AddEdit(EdtName: String; Prompt: String; TopMargin: Integer);
+{
+  if (IsWide)
+  {
+    TmpEdt = MyForm.AddNewProEdit(FormScroll, EdtName, '');
+  }
+  else
+  {
+    TmpEdt = MyForm.AddNewProEdit(SolPanel, EdtName, '');
+  }
+  TmpEdt.Align = alTop;
+  TmpEdt.Height = 50 * Sc;
+  TmpEdt.Margins.Top = TopMargin;
+  TmpEdt.Margins.Left = 15;
+  TmpEdt.Margins.Right = 15;
+  TmpEdt.TextPrompt = Prompt;
+  TmpEdt.clProSettings.FontSize = 14 * Sc;
+  TmpEdt.clProSettings.BorderColor = clAlphaColor.clHexToColor('#CBD5E1');
+  TmpEdt.clProSettings.BorderWidth = 1;
+  TmpEdt.clProSettings.RoundWidth = 8;
+  TmpEdt.clProSettings.RoundHeight = 8;
+  TmpEdt.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F8FAFC');
+  TmpEdt.SetclProSettings(TmpEdt.clProSettings);
+}
+
+// Buton olusturur (ButtonPanel icinde); sonucu TmpBtn'e koyar
+void AddBtn(BtnName: String; Caption: String; ColorHex: String; IsBottom: Boolean);
+{
+  TmpBtn = MyForm.AddNewProButton(ButtonPanel, BtnName, Caption);
+  if (IsBottom)
+  {
+    TmpBtn.Align = alBottom;
+    TmpBtn.Height = 50 * Sc;
+  }
+  else
+  {
+    TmpBtn.Align = alTop;
+    TmpBtn.Height = 45 * Sc;
+    TmpBtn.Margins.Bottom = 8;
+  }
+  TmpBtn.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(ColorHex);
+  TmpBtn.clProSettings.FontColor = clAlphaColor.clWhite;
+  TmpBtn.clProSettings.FontSize = 14 * Sc;
+  TmpBtn.clProSettings.IsFill = True;
+  TmpBtn.clProSettings.IsRound = True;
+  TmpBtn.clProSettings.RoundWidth = 8;
+  TmpBtn.clProSettings.RoundHeight = 8;
+  TmpBtn.clProSettings.BorderWidth = 0;
+  TmpBtn.clProSettings.TextSettings.Font.Style = [fsBold];
+  TmpBtn.SetclProSettings(TmpBtn.clProSettings);
+}
+
+{
+  MyForm = TclForm.Create(Self);
+  MyForm.clSetCaption('Depo');
+  MyForm.SetFormColor('#F8FAFC', '#F8FAFC', clGNone);
+
+  // Her seyden once ekran olcusunu hesapla
+  CalcLayout;
+
+  // ---------------- UST PANEL + ARAMA ----------------
+  UstPanel = MyForm.AddNewProPanel(MyForm, 'UstPanel');
+  UstPanel.Align = alTop;
+  UstPanel.Height = 70 * Sc;
+  UstPanel.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#3B82F6');
+  UstPanel.clProSettings.IsFill = True;
+  UstPanel.SetclProSettings(UstPanel.clProSettings);
+
+  searchEdt = MyForm.AddNewProSearchEdit(UstPanel, 'searchEdt', 'Urun Adi Ile Arama Yap...');
+  if (IsWide)
+  {
+    searchEdt.Align = alCenter;
+    searchEdt.Width = 400;
+  }
+  else
+  {
+    // Telefonda sabit 400 genislik tasar; tum genisligi kaplasin
+    searchEdt.Align = alClient;
+    searchEdt.Margins.Left = 15;
+    searchEdt.Margins.Right = 15;
+  }
+  searchEdt.Margins.Top = 15 * Sc;
+  searchEdt.Margins.Bottom = 15 * Sc;
+  searchEdt.clProSettings.FontSize = 14 * Sc;
+  searchEdt.clProSettings.RoundWidth = 10;
+  searchEdt.clProSettings.RoundHeight = 10;
+  searchEdt.clProSettings.BackgroundColor = clAlphaColor.clWhite;
+  searchEdt.SetclProSettings(searchEdt.clProSettings);
+
+  // ---------------- ANA KAPSAYICI ----------------
+  // Telefon modunda tum sayfa kayar (form + liste alt alta)
+  if not (IsWide)
+  {
+    MainScroll = MyForm.AddNewVertScrollBox(MyForm, 'MainScroll');
+    MainScroll.Align = alClient;
+  }
+
+  // ---------------- SOL / FORM PANELI ----------------
+  if (IsWide)
+  {
+    SolPanel = MyForm.AddNewProPanel(MyForm, 'SolPanel');
+    SolPanel.Align = alLeft;
+    SolPanel.Width = SolW;
+    SolPanel.Margins.Top = 10;
+    SolPanel.Margins.Left = 10;
+    SolPanel.Margins.Bottom = 10;
+  }
+  else
+  {
+    SolPanel = MyForm.AddNewProPanel(MainScroll, 'SolPanel');
+    SolPanel.Align = alTop;
+    SolPanel.Height = PhoneFormH;
+    SolPanel.Margins.Top = 10;
+    SolPanel.Margins.Left = 10;
+    SolPanel.Margins.Right = 10;
+  }
+  SolPanel.clProSettings.BackgroundColor = clAlphaColor.clWhite;
+  SolPanel.clProSettings.IsFill = True;
+  SolPanel.clProSettings.RoundWidth = 12;
+  SolPanel.clProSettings.RoundHeight = 12;
+  SolPanel.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  SolPanel.clProSettings.BorderWidth = 1;
+  SolPanel.SetclProSettings(SolPanel.clProSettings);
+
+  // Genis modda form icerigi kayabilsin (yatay telefonda ekran dusuk olabilir)
+  if (IsWide)
+  {
+    FormScroll = MyForm.AddNewVertScrollBox(SolPanel, 'FormScroll');
+    FormScroll.Align = alClient;
+  }
+
+  AddEdit('UrunAdiEdt', 'Urun Adi', 15);
+  UrunAdiEdt = TmpEdt;
+
+  AddEdit('BarkodEdt', 'Barkod', 10);
+  BarkodEdt = TmpEdt;
+  BarkodEdt.clTypeOfField = taFloat;
+  BarkodEdt.KeyboardType = vktNumberPad;
+
+  AddEdit('KategoriEdt', 'Kategori', 10);
+  KategoriEdt = TmpEdt;
+
+  AddEdit('FiyatEdt', 'Fiyat', 10);
+  FiyatEdt = TmpEdt;
+  FiyatEdt.clTypeOfField = taFloat;
+  FiyatEdt.KeyboardType = vktDecimalNumberPad;
+
+  AddEdit('StokMiktariEdt', 'Stok Miktari', 10);
+  StokMiktariEdt = TmpEdt;
+  StokMiktariEdt.clTypeOfField = taFloat;
+  StokMiktariEdt.KeyboardType = vktNumberPad;
+
+  // ---------------- BUTON PANELI ----------------
+  // Artik alBottom degil alTop: edit'lerin hemen altinda akar,
+  // boylece scroll icinde de dogru sirada durur
+  if (IsWide)
+  {
+    ButtonPanel = MyForm.AddNewProPanel(FormScroll, 'ButtonPanel');
+  }
+  else
+  {
+    ButtonPanel = MyForm.AddNewProPanel(SolPanel, 'ButtonPanel');
+  }
+  ButtonPanel.Align = alTop;
+  ButtonPanel.Height = BtnPanelH;
+  ButtonPanel.Margins.Top = 10;
+  ButtonPanel.Margins.Left = 10;
+  ButtonPanel.Margins.Right = 10;
+  ButtonPanel.Margins.Bottom = 10;
+  ButtonPanel.clProSettings.BackgroundColor = clAlphaColor.clWhite;
+  ButtonPanel.clProSettings.IsFill = True;
+  ButtonPanel.SetclProSettings(ButtonPanel.clProSettings);
+
+  AddBtn('KaydetBtn', 'Kaydet', '#10B981', False);
+  KaydetBtn = TmpBtn;
+
+  AddBtn('GuncelleBtn', 'Guncelle', '#3B82F6', False);
+  GuncelleBtn = TmpBtn;
+
+  AddBtn('SilBtn', 'Sil', '#EF4444', False);
+  SilBtn = TmpBtn;
+
+  AddBtn('SatisBtn', 'Satisa Git', '#F59E0B', True);
+  SatisBtn = TmpBtn;
+  MyForm.AddNewEvent(SatisBtn, tbeOnClick, 'SatiseGit');
+
+  // ---------------- SAG / LISTE PANELI ----------------
+  if (IsWide)
+  {
+    SagPanel = MyForm.AddNewProPanel(MyForm, 'SagPanel');
+    SagPanel.Align = alClient;
+    SagPanel.Margins.Top = 10;
+    SagPanel.Margins.Right = 10;
+    SagPanel.Margins.Bottom = 10;
+  }
+  else
+  {
+    // Telefonda formun altinda, ekranin ~%70'i kadar yukseklikte
+    SagPanel = MyForm.AddNewProPanel(MainScroll, 'SagPanel');
+    SagPanel.Align = alTop;
+    SagPanel.Height = ScreenH * 0.7;
+    if (SagPanel.Height < 320) { SagPanel.Height = 320; }
+    SagPanel.Margins.Top = 10;
+    SagPanel.Margins.Left = 10;
+    SagPanel.Margins.Right = 10;
+    SagPanel.Margins.Bottom = 10;
+  }
+  SagPanel.clProSettings.BackgroundColor = clAlphaColor.clWhite;
+  SagPanel.clProSettings.IsFill = True;
+  SagPanel.clProSettings.RoundWidth = 12;
+  SagPanel.clProSettings.RoundHeight = 12;
+  SagPanel.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0');
+  SagPanel.clProSettings.BorderWidth = 1;
+  SagPanel.SetclProSettings(SagPanel.clProSettings);
+
+  PListView = MyForm.AddNewProListView(SagPanel, 'PListView');
+  PListView.Align = alClient;
+  PListView.Margins.Top = 10;
+  PListView.Margins.Bottom = 10;
+  PListView.Margins.Left = 10;
+  PListView.Margins.Right = 10;
+
+  DPanl = MyForm.AddNewProListViewDesignerPanel(PListView, 'DPanl');
+  DPanl.Align = alTop;
+  DPanl.Height = 120 * Sc;
+  DPanl.clProSettings.IsRound = True;
+  DPanl.clProSettings.IsFill = True;
+  DPanl.clProSettings.ItemHeight = 130 * Sc;
+  DPanl.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F8FAFC');
+  DPanl.clProSettings.BorderColor = clAlphaColor.clHexToColor('#CBD5E1');
+  DPanl.clProSettings.BorderWidth = 1;
+  DPanl.clProSettings.RoundWidth = 10;
+  DPanl.clProSettings.RoundHeight = 10;
+  DPanl.SetclProSettings(DPanl.clProSettings);
+  PListView.SetDesignerPanel(DPanl);
+
+  UrunLbl = MyForm.AddNewProLabel(DPanl, 'UrunLbl', '-');
+  UrunLbl.Align = alLeft;
+  UrunLbl.Margins.Left = 15;
+  UrunLbl.Height = 30 * Sc;
+  UrunLbl.clProSettings.FontColor = clAlphaColor.clHexToColor('#1E293B');
+  UrunLbl.clProSettings.FontHorzAlign = palLeading;
+  UrunLbl.clProSettings.FontVertAlign = palCenter;
+  UrunLbl.clProSettings.FontSize = 16 * Sc;
+  UrunLbl.clProSettings.AutoSize = True;
+  UrunLbl.clProSettings.TextSettings.Font.Style = [fsBold];
+  UrunLbl.SetclProSettings(UrunLbl.clProSettings);
+  DPanl.AddPanelObject(UrunLbl, clText4);
+
+  BarkodLbl = MyForm.AddNewProLabel(DPanl, 'BarkodLbl', '-');
+  BarkodLbl.Align = alLeft;
+  BarkodLbl.Margins.Left = 15;
+  BarkodLbl.Height = 25 * Sc;
+  BarkodLbl.clProSettings.AutoSize = True;
+  BarkodLbl.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  BarkodLbl.clProSettings.FontHorzAlign = palLeading;
+  BarkodLbl.clProSettings.FontVertAlign = palCenter;
+  BarkodLbl.clProSettings.FontSize = 13 * Sc;
+  BarkodLbl.SetclProSettings(BarkodLbl.clProSettings);
+  DPanl.AddPanelObject(BarkodLbl, clText);
+
+  KategoriLbl = MyForm.AddNewProLabel(DPanl, 'KategoriLbl', '-');
+  KategoriLbl.Align = alLeft;
+  KategoriLbl.Margins.Left = 15;
+  KategoriLbl.Height = 25 * Sc;
+  KategoriLbl.clProSettings.AutoSize = True;
+  KategoriLbl.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  KategoriLbl.clProSettings.FontHorzAlign = palLeading;
+  KategoriLbl.clProSettings.FontVertAlign = palCenter;
+  KategoriLbl.clProSettings.FontSize = 13 * Sc;
+  KategoriLbl.SetclProSettings(KategoriLbl.clProSettings);
+  DPanl.AddPanelObject(KategoriLbl, clText1);
+
+  FiyatLbl = MyForm.AddNewProLabel(DPanl, 'FiyatLbl', '-');
+  FiyatLbl.Align = alLeft;
+  FiyatLbl.Margins.Left = 15;
+  FiyatLbl.Height = 25 * Sc;
+  FiyatLbl.clProSettings.AutoSize = True;
+  FiyatLbl.clProSettings.FontColor = clAlphaColor.clHexToColor('#10B981');
+  FiyatLbl.clProSettings.FontHorzAlign = palLeading;
+  FiyatLbl.clProSettings.FontVertAlign = palCenter;
+  FiyatLbl.clProSettings.FontSize = 14 * Sc;
+  FiyatLbl.clProSettings.TextSettings.Font.Style = [fsBold];
+  FiyatLbl.SetclProSettings(FiyatLbl.clProSettings);
+  DPanl.AddPanelObject(FiyatLbl, clText2);
+
+  StokMiktarLbl = MyForm.AddNewProLabel(DPanl, 'StokMiktarLbl', '-');
+  StokMiktarLbl.Align = alLeft;
+  StokMiktarLbl.Margins.Left = 15;
+  StokMiktarLbl.Height = 25 * Sc;
+  StokMiktarLbl.clProSettings.AutoSize = True;
+  StokMiktarLbl.clProSettings.FontColor = clAlphaColor.clHexToColor('#3B82F6');
+  StokMiktarLbl.clProSettings.FontHorzAlign = palLeading;
+  StokMiktarLbl.clProSettings.FontVertAlign = palCenter;
+  StokMiktarLbl.clProSettings.FontSize = 13 * Sc;
+  StokMiktarLbl.clProSettings.TextSettings.Font.Style = [fsBold];
+  StokMiktarLbl.SetclProSettings(StokMiktarLbl.clProSettings);
+  DPanl.AddPanelObject(StokMiktarLbl, clText3);
+
+  MyForm.AddNewEvent(PListView, tbeOnItemClick, 'onItemClicked');
+  MyForm.AddNewEvent(KaydetBtn, tbeOnClick, 'DataInsert');
+  MyForm.AddNewEvent(GuncelleBtn, tbeOnClick, 'DataUpdate');
+  MyForm.AddNewEvent(SilBtn, tbeOnClick, 'DataDelete');
+  MyForm.AddNewEvent(searchEdt, tbeOnKeyUp, 'GetData');
+
+  SqLiteConnectionCreateTable;
+  GetData;
+
+  MyForm.Run;
+}
