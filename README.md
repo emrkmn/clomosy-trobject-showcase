@@ -15,8 +15,8 @@ Bu depo, **Clomosy** mobil uygulama geliştirme platformunda **TRObject** progra
 | [📍 Canlı Hava & GPS (Leaflet)](./02-data-and-sensors/live-weather-gps-rest/) | Veri & Sensör Entegrasyonu | `TclRest`, Open-Meteo API, GPS Timer, Leaflet JS WebView | ✅ Hazır |
 | [📈 Kurumsal CRM & Dashboard](./04-complete-apps/enterprise-crm-dashboard/) | Uçtan Uca Tam Uygulama | Yerel SQLite CRUD, Canlı KPI & Çubuk Grafik, Accordion UI | ✅ Hazır |
 | [📦 Perakende Stok & POS Sistemi](./04-complete-apps/retail-inventory-pos-system/) | Çok Birimli Tam Uygulama | 4 Birimli Mimari, Barkod Okuma, Fiş/CSV Dışa Aktarma, Sepet Yönetimi | ✅ Hazır |
-| `01-ui-components` | Dinamik Arayüz Tasarımı | Dynamic Layout, Form Kontrolleri, Özel Kart Bileşenleri | ⏳ Planlandı |
-| `03-hardware-and-sensors` | Donanım ve Servisler | Barkod / QR Okuma, Kamera, Push Notification | ⏳ Planlandı |
+| [🚗 Oto Yıkama & Servis Takip](./04-complete-apps/car-wash-service-tracker/) | Hizmet & Servis Yönetimi | Canlı Günlük Ciro Analizi, Hizmet Paket Seçimi, Dinamik SQLite Migrasyonu | ✅ Hazır |
+
 
 ---
 
