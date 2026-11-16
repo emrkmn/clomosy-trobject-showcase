@@ -8,13 +8,16 @@ var
   LblDoluStat, LblBosStat: TclProLabel;
   BtnTabPark, BtnTabHistory: TclProButton;
   PnlModalBack, PnlModalBox: TclProPanel;
-  LblModalTitle: TclProLabel;
+  LblModalTitle, LblModalInfo: TclProLabel;
   EdtPlaka: TclProEdit;
   BtnModalOto, BtnModalKamyon, BtnModalCikis, BtnModalIptal: TclProButton;
   IslemTipi: String; 
   SeciliSlotID: Integer;
   HistoryScroll: TclVertScrollBox;
   QryPark, QryHistory: TclSQLiteQuery;
+  GeciciPlaka, GeciciTipi, GeciciGirisStr: String;
+  GeciciSure: Integer;
+  GeciciUcret: Double;
 
 const
   CAPACITY = 20; 
@@ -32,7 +35,7 @@ void SetupDB;
 var i: Integer;
 {
   try
-    Clomosy.DBSQLiteConnect(Clomosy.AppFilesPath + 'ModernParkV1.db', '');
+    Clomosy.DBSQLiteConnect(Clomosy.AppFilesPath + 'ModernParkV2.db', '');
     
     Clomosy.DBSQLiteQuery.Sql.Text = 'CREATE TABLE IF NOT EXISTS TBL_SLOTS (' +
       'SlotID INTEGER PRIMARY KEY, ' +
@@ -50,7 +53,7 @@ var i: Integer;
       'GirisZamani TEXT, ' +
       'CikisZamani TEXT, ' +
       'Sure INTEGER, ' +
-      'Ucret TEXT)';
+      'Ucret REAL)';
     Clomosy.DBSQLiteQuery.OpenOrExecute;
     
     QryPark = Clomosy.DBSQLiteQueryWith('SELECT COUNT(*) as Sayi FROM TBL_SLOTS');
@@ -71,13 +74,13 @@ var i: Integer;
 void UpdateStats;
 var
   Dolu, Bos: Integer;
-  BugunTarih: String;
 {
   try
     QryPark = Clomosy.DBSQLiteQueryWith('SELECT Status, COUNT(*) as Sayi FROM TBL_SLOTS GROUP BY Status');
     QryPark.OpenOrExecute;
     
-    Dolu = 0; Bos = CAPACITY; 
+    Dolu = 0; 
+    Bos = CAPACITY; 
     
     while (not QryPark.Eof)
     {
@@ -90,15 +93,13 @@ var
     LblDoluStat.Text = 'Dolu: ' + IntToStr(Dolu);
     LblBosStat.Text = 'Boş: ' + IntToStr(Bos);
     
-    BugunTarih = FormatDateTime('dd.mm.yyyy', Now);
-    QryHistory = Clomosy.DBSQLiteQueryWith('SELECT SUM(Ucret) as Toplam FROM TBL_HISTORY');
+    QryHistory = Clomosy.DBSQLiteQueryWith('SELECT SUM(CAST(Ucret AS REAL)) as Toplam FROM TBL_HISTORY');
     QryHistory.OpenOrExecute;
     
     if (QryHistory.FieldByName('Toplam').AsString == '') 
       LblCiroVal.Text = '0.00 ₺';
     else
       LblCiroVal.Text = FormatFloat('#,##0.00', QryHistory.FieldByName('Toplam').AsFloat) + ' ₺';
-      
   except
   }
 }
@@ -142,11 +143,15 @@ var
     BtnSlot.Left = Gap + ((i-1) mod ColCount) * (BoxSize + Gap);
     BtnSlot.Top = Gap + ((i-1) div ColCount) * (BoxSize + Gap);
     
-    BtnSlot.clProSettings.RoundWidth = 10; BtnSlot.clProSettings.RoundHeight = 10;
+    BtnSlot.clProSettings.IsFill = True;
+    BtnSlot.clProSettings.IsRound = True;
+    BtnSlot.clProSettings.RoundWidth = 10; 
+    BtnSlot.clProSettings.RoundHeight = 10;
     BtnSlot.clProSettings.BorderWidth = 2;
     BtnSlot.clProSettings.FontSize = 10;
     BtnSlot.clProSettings.FontVertAlign = palCenter;
-    BtnSlot.clProSettings.TextSettings.WordWrap = True;
+    BtnSlot.clProSettings.FontHorzAlign = palCenter;
+    BtnSlot.clProSettings.WordWrap = True;
     
     if (SlotStatus == 'EMPTY')
     {
@@ -195,33 +200,47 @@ var
     while (not QryHistory.Eof)
     {
       PnlItem = MainForm.AddNewProPanel(HistoryScroll, 'Hist_'+QryHistory.FieldByName('ID').AsString);
-      PnlItem.Align = alTop; PnlItem.Height = 70;
-      PnlItem.Margins.Left = 10; PnlItem.Margins.Right = 10; PnlItem.Margins.Bottom = 10;
+      PnlItem.Align = alTop; 
+      PnlItem.Height = 70;
+      PnlItem.Margins.Left = 10; 
+      PnlItem.Margins.Right = 10; 
+      PnlItem.Margins.Bottom = 10;
       PnlItem.clProSettings.BackgroundColor = clAlphaColor.clWhite;
-      PnlItem.clProSettings.RoundWidth = 10; PnlItem.clProSettings.RoundHeight = 10;
-      PnlItem.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0'); PnlItem.clProSettings.BorderWidth = 1;
+      PnlItem.clProSettings.IsFill = True;
+      PnlItem.clProSettings.IsRound = True;
+      PnlItem.clProSettings.RoundWidth = 10; 
+      PnlItem.clProSettings.RoundHeight = 10;
+      PnlItem.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0'); 
+      PnlItem.clProSettings.BorderWidth = 1;
       PnlItem.SetclProSettings(PnlItem.clProSettings);
       
       IconView = MainForm.AddNewProLabel(PnlItem, 'Icon_'+QryHistory.FieldByName('ID').AsString, '');
       if (QryHistory.FieldByName('AracTipi').AsString == 'KAMYON') IconView.Text = '🚛';
       else IconView.Text = '🚗';
-      IconView.Align = alLeft; IconView.Width = 50;
-      IconView.clProSettings.FontSize = 24; IconView.clProSettings.FontHorzAlign = palCenter; IconView.clProSettings.FontVertAlign = palCenter;
+      IconView.Align = alLeft; 
+      IconView.Width = 50;
+      IconView.clProSettings.FontSize = 24; 
+      IconView.clProSettings.FontHorzAlign = palCenter; 
+      IconView.clProSettings.FontVertAlign = palCenter;
       IconView.SetclProSettings(IconView.clProSettings);
       
       LblInfo = MainForm.AddNewProLabel(PnlItem, 'Info_'+QryHistory.FieldByName('ID').AsString, 
         QryHistory.FieldByName('Plaka').AsString + #13#10 + 
         'Slot ' + QryHistory.FieldByName('SlotID').AsString + ' • ' + QryHistory.FieldByName('Sure').AsString + ' dk');
-      LblInfo.Align = alClient; LblInfo.Margins.Top = 15;
-      LblInfo.clProSettings.FontSize = 12; LblInfo.clProSettings.FontColor = clAlphaColor.clHexToColor('#000000');
-      LblInfo.clProSettings.TextSettings.Font.Style = [fsBold];
+      LblInfo.Align = alClient; 
+      LblInfo.Margins.Top = 15;
+      LblInfo.clProSettings.FontSize = 12; 
+      LblInfo.clProSettings.FontColor = clAlphaColor.clHexToColor('#000000');
       LblInfo.SetclProSettings(LblInfo.clProSettings);
       
-      LblPrice = MainForm.AddNewProLabel(PnlItem, 'Price_'+QryHistory.FieldByName('ID').AsString, '+' + QryHistory.FieldByName('Ucret').AsString + ' ₺');
-      LblPrice.Align = alRight; LblPrice.Width = 80; LblPrice.Margins.Right = 10;
-      LblPrice.clProSettings.FontSize = 16; LblPrice.clProSettings.FontColor = clAlphaColor.clHexToColor(Color_Green);
-      LblPrice.clProSettings.FontHorzAlign = palTrailing; LblPrice.clProSettings.FontVertAlign = palCenter;
-      LblPrice.clProSettings.TextSettings.Font.Style = [fsBold];
+      LblPrice = MainForm.AddNewProLabel(PnlItem, 'Price_'+QryHistory.FieldByName('ID').AsString, '+' + FormatFloat('0.00', QryHistory.FieldByName('Ucret').AsFloat) + ' ₺');
+      LblPrice.Align = alRight; 
+      LblPrice.Width = 90; 
+      LblPrice.Margins.Right = 10;
+      LblPrice.clProSettings.FontSize = 15; 
+      LblPrice.clProSettings.FontColor = clAlphaColor.clHexToColor(Color_Green);
+      LblPrice.clProSettings.FontHorzAlign = palTrailing; 
+      LblPrice.clProSettings.FontVertAlign = palCenter;
       LblPrice.SetclProSettings(LblPrice.clProSettings);
       
       QryHistory.Next;
@@ -229,15 +248,54 @@ var
   }
 }
 
+void HazirlaCikisBilgisi;
+var
+  SureDk, Carpan: Double;
+{
+  try
+    // Süreyi cihazın bölgesel saat formatından bağımsız olarak doğrudan SQLite julianday ile hesaplıyoruz
+    QryPark = Clomosy.DBSQLiteQueryWith(
+      'SELECT Plaka, AracTipi, GirisZamani, ' +
+      'CAST((julianday(''now'', ''localtime'') - julianday(GirisZamani)) * 1440 AS INTEGER) AS FarkDk ' +
+      'FROM TBL_SLOTS WHERE SlotID = ' + IntToStr(SeciliSlotID)
+    );
+    QryPark.OpenOrExecute;
+    
+    if (QryPark.Found)
+    {
+      GeciciPlaka = QryPark.FieldByName('Plaka').AsString;
+      GeciciTipi = QryPark.FieldByName('AracTipi').AsString;
+      GeciciGirisStr = QryPark.FieldByName('GirisZamani').AsString;
+      SureDk = QryPark.FieldByName('FarkDk').AsFloat;
+      
+      if (SureDk < 1) SureDk = 1;
+      GeciciSure = Round(SureDk);
+      
+      if (GeciciTipi == 'KAMYON') Carpan = 2.0; else Carpan = 1.0;
+      
+      GeciciUcret = SureDk * UNIT_PRICE * Carpan;
+      if (GeciciUcret < (MIN_FEE * Carpan)) GeciciUcret = MIN_FEE * Carpan;
+      
+      LblModalInfo.Text = 
+        'Plaka: ' + GeciciPlaka + ' (' + GeciciTipi + ')' + #13#10 +
+        'Süre: ' + IntToStr(GeciciSure) + ' Dakika' + #13#10 +
+        'Ödenecek Tutar: ' + FormatFloat('#,##0.00', GeciciUcret) + ' ₺';
+    }
+  except
+    ShowMessage('Hesaplama Hatası: ' + LastExceptionMessage);
+  }
+}
+
 void OpenModal(Type: String);
 {
   IslemTipi = Type;
   PnlModalBack.Visible = True;
-  clRTMethod(PnlModalBack,'BringToFront')
+  clRTMethod(PnlModalBack, 'BringToFront');
   
   if (Type == 'GIRIS')
   {
     LblModalTitle.Text = 'Araç Girişi - Slot ' + IntToStr(SeciliSlotID);
+    LblModalInfo.Visible = False;
     EdtPlaka.Text = '';
     EdtPlaka.Visible = True;
     BtnModalOto.Visible = True;
@@ -247,6 +305,8 @@ void OpenModal(Type: String);
   else 
   {
     LblModalTitle.Text = 'Araç Çıkışı - Slot ' + IntToStr(SeciliSlotID);
+    HazirlaCikisBilgisi;
+    LblModalInfo.Visible = True;
     EdtPlaka.Visible = False;
     BtnModalOto.Visible = False;
     BtnModalKamyon.Visible = False;
@@ -262,7 +322,7 @@ void CloseModal;
 void OnSlotClick;
 var Btn: TclProButton;
 {
-  Btn = TclProButton(MainForm.clSender);
+  Btn = TclProButton(MainForm.ClSender);
   SeciliSlotID = StrToInt(Btn.clTagStr);
   
   if (Btn.clTagInt == 0) OpenModal('GIRIS');
@@ -271,62 +331,58 @@ var Btn: TclProButton;
 
 void DoEntry(AracTipi: String);
 {
-  if (EdtPlaka.Text == '') { ShowMessage('Plaka Giriniz!'); Exit; }
+  if (Trim(EdtPlaka.Text) == '') { ShowMessage('Plaka Giriniz!'); Exit; }
   
   try
-    Clomosy.DBSQLiteQuery.Sql.Text = 'UPDATE TBL_SLOTS SET Status="FULL", Plaka='+QuotedStr(UpperCase(EdtPlaka.Text))+', AracTipi='+QuotedStr(AracTipi)+', GirisZamani='+QuotedStr(DateTimeToStr(Now))+' WHERE SlotID='+IntToStr(SeciliSlotID);
+    // SQLite standart tarih formatı (datetime('now', 'localtime')) ile kayıt
+    Clomosy.DBSQLiteQuery.Sql.Text = 
+      'UPDATE TBL_SLOTS SET Status="FULL", ' +
+      'Plaka=' + QuotedStr(UpperCase(Trim(EdtPlaka.Text))) + ', ' +
+      'AracTipi=' + QuotedStr(AracTipi) + ', ' +
+      'GirisZamani=datetime(''now'', ''localtime'') ' +
+      'WHERE SlotID=' + IntToStr(SeciliSlotID);
     Clomosy.DBSQLiteQuery.OpenOrExecute;
     
     CloseModal;
     RenderParkGrid;
-    ShowMessage('Giriş Yapıldı: ' + EdtPlaka.Text);
+    ShowMessage('Giriş Yapıldı: ' + UpperCase(Trim(EdtPlaka.Text)));
   except
-    ShowMessage('Hata:'+LastExceptionMessage);
+    ShowMessage('Hata: ' + LastExceptionMessage);
   }
 }
+
 void OnBtnOtoClick; { DoEntry('OTO'); }
 void OnBtnKamyonClick; { DoEntry('KAMYON'); }
 
 void OnBtnCikisClick;
 var
-  GirisStr, Plaka, Tipi: String;
-  GirisZamani: TDateTime;
-  Sure, Ucret, Carpan: Double;
+  UcretNoktali: String;
 {
   try
-    QryPark = Clomosy.DBSQLiteQueryWith('SELECT * FROM TBL_SLOTS WHERE SlotID='+IntToStr(SeciliSlotID));
-    QryPark.OpenOrExecute;
+    // DÜZELTME: 4. parametre olan rfReplaceAll kaldırıldı (3 parametre)
+    UcretNoktali = clGetStringReplace(FormatFloat('0.00', GeciciUcret), ',', '.');
+
+    Clomosy.DBSQLiteQuery.Sql.Text = 
+      'INSERT INTO TBL_HISTORY (SlotID, Plaka, AracTipi, GirisZamani, CikisZamani, Sure, Ucret) VALUES (' +
+      IntToStr(SeciliSlotID) + ',' +
+      QuotedStr(GeciciPlaka) + ',' +
+      QuotedStr(GeciciTipi) + ',' +
+      QuotedStr(GeciciGirisStr) + ',' +
+      'datetime(''now'', ''localtime''),' +
+      IntToStr(GeciciSure) + ',' +
+      UcretNoktali + ')';
+    Clomosy.DBSQLiteQuery.OpenOrExecute;
     
-    if (QryPark.Found)
-    {
-      Plaka = QryPark.FieldByName('Plaka').AsString;
-      Tipi = QryPark.FieldByName('AracTipi').AsString;
-      GirisStr = QryPark.FieldByName('GirisZamani').AsString;
-      GirisZamani = StrToDateTime(GirisStr);
-      
-      Sure = (Now - GirisZamani) * 1440; 
-      if (Tipi == 'KAMYON') Carpan = 2.0; else Carpan = 1.0;
-      
-      Ucret = (Sure * UNIT_PRICE * Carpan);
-      if (Ucret < MIN_FEE * Carpan) Ucret = MIN_FEE * Carpan;
-      
-      if (Clomosy.Ask('Çıkış Onayı:'+#13+Plaka+#13+'Süre: '+FormatFloat('0', Sure)+' dk'+#13+'Tutar: '+FormatFloat('#,##0.00', Ucret)+' TL'))
-      {
-        Clomosy.DBSQLiteQuery.Sql.Text = 'INSERT INTO TBL_HISTORY (SlotID, Plaka, AracTipi, GirisZamani, CikisZamani, Sure, Ucret) VALUES ('+
-          IntToStr(SeciliSlotID)+','+QuotedStr(Plaka)+','+QuotedStr(Tipi)+','+QuotedStr(GirisStr)+','+QuotedStr(DateTimeToStr(Now))+','+
-          IntToStr(Round(Sure))+','+QuotedStr(FormatFloat('0.00', Ucret))+')';
-        Clomosy.DBSQLiteQuery.OpenOrExecute;
-        
-        Clomosy.DBSQLiteQuery.Sql.Text = 'UPDATE TBL_SLOTS SET Status="EMPTY", Plaka="", AracTipi="", GirisZamani="" WHERE SlotID='+IntToStr(SeciliSlotID);
-        Clomosy.DBSQLiteQuery.OpenOrExecute;
-        
-        CloseModal;
-        RenderParkGrid;
-        ShowMessage('Tahsilat Yapıldı.');
-      }
-    }
+    Clomosy.DBSQLiteQuery.Sql.Text = 
+      'UPDATE TBL_SLOTS SET Status="EMPTY", Plaka="", AracTipi="", GirisZamani="" ' +
+      'WHERE SlotID=' + IntToStr(SeciliSlotID);
+    Clomosy.DBSQLiteQuery.OpenOrExecute;
+    
+    CloseModal;
+    RenderParkGrid;
+    ShowMessage('✅ Çıkış ve Tahsilat Tamamlandı (' + FormatFloat('#,##0.00', GeciciUcret) + ' ₺)');
   except
-    ShowMessage('Hata:'+LastExceptionMessage);
+    ShowMessage('Çıkış Hatası: ' + LastExceptionMessage);
   }
 }
 
@@ -334,8 +390,10 @@ void SwitchToPark;
 {
   PnlParkView.Visible = True;
   PnlHistoryView.Visible = False;
-  BtnTabPark.clProSettings.FontColor = clAlphaColor.clHexToColor(Color_Blue); BtnTabPark.SetclProSettings(BtnTabPark.clProSettings);
-  BtnTabHistory.clProSettings.FontColor = clAlphaColor.clHexToColor('#94A3B8'); BtnTabHistory.SetclProSettings(BtnTabHistory.clProSettings);
+  BtnTabPark.clProSettings.FontColor = clAlphaColor.clHexToColor(Color_Blue); 
+  BtnTabPark.SetclProSettings(BtnTabPark.clProSettings);
+  BtnTabHistory.clProSettings.FontColor = clAlphaColor.clHexToColor('#94A3B8'); 
+  BtnTabHistory.SetclProSettings(BtnTabHistory.clProSettings);
   RenderParkGrid;
 }
 
@@ -343,8 +401,10 @@ void SwitchToHistory;
 {
   PnlParkView.Visible = False;
   PnlHistoryView.Visible = True;
-  BtnTabHistory.clProSettings.FontColor = clAlphaColor.clHexToColor(Color_Blue); BtnTabHistory.SetclProSettings(BtnTabHistory.clProSettings);
-  BtnTabPark.clProSettings.FontColor = clAlphaColor.clHexToColor('#94A3B8'); BtnTabPark.SetclProSettings(BtnTabPark.clProSettings);
+  BtnTabHistory.clProSettings.FontColor = clAlphaColor.clHexToColor(Color_Blue); 
+  BtnTabHistory.SetclProSettings(BtnTabHistory.clProSettings);
+  BtnTabPark.clProSettings.FontColor = clAlphaColor.clHexToColor('#94A3B8'); 
+  BtnTabPark.SetclProSettings(BtnTabPark.clProSettings);
   RenderHistory;
 }
 
@@ -354,97 +414,183 @@ void SetupUI;
   MainForm.SetFormColor(Color_Bg, Color_Bg, clGCross);
   
   PnlModalBack = MainForm.AddNewProPanel(MainForm, 'PnlModalBack');
-  PnlModalBack.Align = alClient; PnlModalBack.Visible = False;
+  PnlModalBack.Align = alClient; 
+  PnlModalBack.Visible = False;
   PnlModalBack.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#80000000'); 
+  PnlModalBack.clProSettings.IsFill = True;
   PnlModalBack.SetclProSettings(PnlModalBack.clProSettings);
   
   PnlModalBox = MainForm.AddNewProPanel(PnlModalBack, 'PnlModalBox');
-  PnlModalBox.Align = alCenter; PnlModalBox.Width = 300; PnlModalBox.Height = 350;
+  PnlModalBox.Align = alCenter; 
+  PnlModalBox.Width = 300; 
+  PnlModalBox.Height = 350;
   PnlModalBox.clProSettings.BackgroundColor = clAlphaColor.clWhite;
-  PnlModalBox.clProSettings.RoundWidth = 20; PnlModalBox.clProSettings.RoundHeight = 20;
+  PnlModalBox.clProSettings.IsFill = True;
+  PnlModalBox.clProSettings.IsRound = True;
+  PnlModalBox.clProSettings.RoundWidth = 20; 
+  PnlModalBox.clProSettings.RoundHeight = 20;
   PnlModalBox.SetclProSettings(PnlModalBox.clProSettings);
   
   LblModalTitle = MainForm.AddNewProLabel(PnlModalBox, 'LblModalTitle', 'Araç Girişi');
-  LblModalTitle.Align = alTop; LblModalTitle.Height = 50; LblModalTitle.Margins.Top = 10;
+  LblModalTitle.Align = alTop; 
+  LblModalTitle.Height = 45; 
+  LblModalTitle.Margins.Top = 12;
   LblModalTitle.clProSettings.FontColor = clAlphaColor.clHexToColor(Color_Slate800);
-  LblModalTitle.clProSettings.FontSize = 16; LblModalTitle.clProSettings.FontHorzAlign = palCenter; LblModalTitle.clProSettings.TextSettings.Font.Style = [fsBold];
+  LblModalTitle.clProSettings.FontSize = 16; 
+  LblModalTitle.clProSettings.FontHorzAlign = palCenter;
   LblModalTitle.SetclProSettings(LblModalTitle.clProSettings);
+
+  // Çıkış ekranında plaka, süre ve tutar özetini gösterecek etiket
+  LblModalInfo = MainForm.AddNewProLabel(PnlModalBox, 'LblModalInfo', '');
+  LblModalInfo.Align = alTop;
+  LblModalInfo.Height = 85;
+  LblModalInfo.Margins.Left = 20;
+  LblModalInfo.Margins.Right = 20;
+  LblModalInfo.Margins.Top = 10;
+  LblModalInfo.Visible = False;
+  LblModalInfo.clProSettings.FontColor = clAlphaColor.clHexToColor(Color_Slate800);
+  LblModalInfo.clProSettings.FontSize = 14;
+  LblModalInfo.clProSettings.FontHorzAlign = palCenter;
+  LblModalInfo.clProSettings.FontVertAlign = palCenter;
+  LblModalInfo.SetclProSettings(LblModalInfo.clProSettings);
   
   EdtPlaka = MainForm.AddNewProEdit(PnlModalBox, 'EdtPlaka', 'PLAKA (34 AA 123)');
-  EdtPlaka.Align = alTop; EdtPlaka.Height = 50; EdtPlaka.Margins.Left = 20; EdtPlaka.Margins.Right = 20; EdtPlaka.Margins.Bottom = 20;
+  EdtPlaka.Align = alTop; 
+  EdtPlaka.Height = 50; 
+  EdtPlaka.Margins.Left = 20; 
+  EdtPlaka.Margins.Right = 20; 
+  EdtPlaka.Margins.Bottom = 20;
   EdtPlaka.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F8FAFC');
-  EdtPlaka.clProSettings.RoundWidth = 10; EdtPlaka.clProSettings.RoundHeight = 10;
+  EdtPlaka.clProSettings.IsFill = True;
+  EdtPlaka.clProSettings.IsRound = True;
+  EdtPlaka.clProSettings.RoundWidth = 10; 
+  EdtPlaka.clProSettings.RoundHeight = 10;
+  EdtPlaka.clProSettings.BorderColor = clAlphaColor.clHexToColor('#CBD5E1');
+  EdtPlaka.clProSettings.BorderWidth = 1;
   EdtPlaka.SetclProSettings(EdtPlaka.clProSettings);
   
   BtnModalOto = MainForm.AddNewProButton(PnlModalBox, 'BtnModalOto', '🚗 OTOMOBİL');
-  BtnModalOto.Align = alTop; BtnModalOto.Height = 50; BtnModalOto.Margins.Left = 20; BtnModalOto.Margins.Right = 20; BtnModalOto.Margins.Bottom = 10;
-  BtnModalOto.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(Color_Green); BtnModalOto.clProSettings.FontColor = clAlphaColor.clWhite;
-  BtnModalOto.clProSettings.IsRound = True; BtnModalOto.SetclProSettings(BtnModalOto.clProSettings);
+  BtnModalOto.Align = alTop; 
+  BtnModalOto.Height = 50; 
+  BtnModalOto.Margins.Left = 20; 
+  BtnModalOto.Margins.Right = 20; 
+  BtnModalOto.Margins.Bottom = 10;
+  BtnModalOto.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(Color_Green); 
+  BtnModalOto.clProSettings.FontColor = clAlphaColor.clWhite;
+  BtnModalOto.clProSettings.IsFill = True;
+  BtnModalOto.clProSettings.IsRound = True;
+  BtnModalOto.clProSettings.RoundWidth = 10;
+  BtnModalOto.clProSettings.RoundHeight = 10;
+  BtnModalOto.SetclProSettings(BtnModalOto.clProSettings);
   MainForm.AddNewEvent(BtnModalOto, tbeOnClick, 'OnBtnOtoClick');
   
   BtnModalKamyon = MainForm.AddNewProButton(PnlModalBox, 'BtnModalKamyon', '🚛 KAMYON / TIR');
-  BtnModalKamyon.Align = alTop; BtnModalKamyon.Height = 50; BtnModalKamyon.Margins.Left = 20; BtnModalKamyon.Margins.Right = 20;
-  BtnModalKamyon.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(Color_Orange); BtnModalKamyon.clProSettings.FontColor = clAlphaColor.clWhite;
-  BtnModalKamyon.clProSettings.IsRound = True; BtnModalKamyon.SetclProSettings(BtnModalKamyon.clProSettings);
+  BtnModalKamyon.Align = alTop; 
+  BtnModalKamyon.Height = 50; 
+  BtnModalKamyon.Margins.Left = 20; 
+  BtnModalKamyon.Margins.Right = 20;
+  BtnModalKamyon.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(Color_Orange); 
+  BtnModalKamyon.clProSettings.FontColor = clAlphaColor.clWhite;
+  BtnModalKamyon.clProSettings.IsFill = True;
+  BtnModalKamyon.clProSettings.IsRound = True;
+  BtnModalKamyon.clProSettings.RoundWidth = 10;
+  BtnModalKamyon.clProSettings.RoundHeight = 10;
+  BtnModalKamyon.SetclProSettings(BtnModalKamyon.clProSettings);
   MainForm.AddNewEvent(BtnModalKamyon, tbeOnClick, 'OnBtnKamyonClick');
   
   BtnModalCikis = MainForm.AddNewProButton(PnlModalBox, 'BtnModalCikis', 'ÇIKIŞ YAP & TAHSİL ET');
-  BtnModalCikis.Align = alTop; BtnModalCikis.Height = 60; BtnModalCikis.Margins.Left = 20; BtnModalCikis.Margins.Right = 20; BtnModalCikis.Margins.Top = 20;
-  BtnModalCikis.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(Color_Red); BtnModalCikis.clProSettings.FontColor = clAlphaColor.clWhite;
-  BtnModalCikis.clProSettings.IsRound = True; BtnModalCikis.SetclProSettings(BtnModalCikis.clProSettings);
+  BtnModalCikis.Align = alTop; 
+  BtnModalCikis.Height = 55; 
+  BtnModalCikis.Margins.Left = 20; 
+  BtnModalCikis.Margins.Right = 20; 
+  BtnModalCikis.Margins.Top = 15;
+  BtnModalCikis.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(Color_Red); 
+  BtnModalCikis.clProSettings.FontColor = clAlphaColor.clWhite;
+  BtnModalCikis.clProSettings.IsFill = True;
+  BtnModalCikis.clProSettings.IsRound = True;
+  BtnModalCikis.clProSettings.RoundWidth = 10;
+  BtnModalCikis.clProSettings.RoundHeight = 10;
+  BtnModalCikis.SetclProSettings(BtnModalCikis.clProSettings);
   MainForm.AddNewEvent(BtnModalCikis, tbeOnClick, 'OnBtnCikisClick');
   
   BtnModalIptal = MainForm.AddNewProButton(PnlModalBox, 'BtnModalIptal', 'İptal');
-  BtnModalIptal.Align = alBottom; BtnModalIptal.Height = 40; BtnModalIptal.Margins.Bottom = 10; BtnModalIptal.Margins.Left = 50; BtnModalIptal.Margins.Right = 50;
-  BtnModalIptal.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#E2E8F0'); BtnModalIptal.clProSettings.FontColor = clAlphaColor.clHexToColor(Color_Slate800);
-  BtnModalIptal.clProSettings.IsRound = True; BtnModalIptal.SetclProSettings(BtnModalIptal.clProSettings);
+  BtnModalIptal.Align = alBottom; 
+  BtnModalIptal.Height = 40; 
+  BtnModalIptal.Margins.Bottom = 12; 
+  BtnModalIptal.Margins.Left = 50; 
+  BtnModalIptal.Margins.Right = 50;
+  BtnModalIptal.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#E2E8F0'); 
+  BtnModalIptal.clProSettings.FontColor = clAlphaColor.clHexToColor(Color_Slate800);
+  BtnModalIptal.clProSettings.IsFill = True;
+  BtnModalIptal.clProSettings.IsRound = True;
+  BtnModalIptal.clProSettings.RoundWidth = 10;
+  BtnModalIptal.clProSettings.RoundHeight = 10;
+  BtnModalIptal.SetclProSettings(BtnModalIptal.clProSettings);
   MainForm.AddNewEvent(BtnModalIptal, tbeOnClick, 'CloseModal');
 
   PnlHeader = MainForm.AddNewProPanel(MainForm, 'PnlHeader');
-  PnlHeader.Align = alTop; PnlHeader.Height = 120;
+  PnlHeader.Align = alTop; 
+  PnlHeader.Height = 120;
   PnlHeader.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(Color_Slate800);
+  PnlHeader.clProSettings.IsFill = True;
   PnlHeader.SetclProSettings(PnlHeader.clProSettings);
   
   LblAppTitle = MainForm.AddNewProLabel(PnlHeader, 'LblAppTitle', 'Otopark v2.0');
-  LblAppTitle.Align = alTop; LblAppTitle.Height = 40; LblAppTitle.Margins.Left = 20; LblAppTitle.Margins.Top = 10;
+  LblAppTitle.Align = alTop; 
+  LblAppTitle.Height = 40; 
+  LblAppTitle.Margins.Left = 20; 
+  LblAppTitle.Margins.Top = 10;
   LblAppTitle.clProSettings.FontColor = clAlphaColor.clHexToColor(Color_Blue);
-  LblAppTitle.clProSettings.FontSize = 20; LblAppTitle.clProSettings.TextSettings.Font.Style = [fsBold];
+  LblAppTitle.clProSettings.FontSize = 20;
   LblAppTitle.SetclProSettings(LblAppTitle.clProSettings);
   
   PnlStats = MainForm.AddNewProPanel(PnlHeader, 'PnlStats');
-  PnlStats.Align = alBottom; PnlStats.Height = 50; PnlStats.Margins.Bottom = 10; PnlStats.Margins.Left = 10; PnlStats.Margins.Right = 10;
+  PnlStats.Align = alBottom; 
+  PnlStats.Height = 50; 
+  PnlStats.Margins.Bottom = 10; 
+  PnlStats.Margins.Left = 10; 
+  PnlStats.Margins.Right = 10;
   PnlStats.clProSettings.IsTransparent = True;
   PnlStats.SetclProSettings(PnlStats.clProSettings);
   
   LblCiroVal = MainForm.AddNewProLabel(PnlStats, 'LblCiroVal', '0.00 ₺');
-  LblCiroVal.Align = alRight; LblCiroVal.Width = 100;
+  LblCiroVal.Align = alRight; 
+  LblCiroVal.Width = 110;
   LblCiroVal.clProSettings.FontColor = clAlphaColor.clHexToColor(Color_Green);
-  LblCiroVal.clProSettings.FontSize = 18; LblCiroVal.clProSettings.TextSettings.Font.Style = [fsBold]; LblCiroVal.clProSettings.FontHorzAlign = palTrailing;
+  LblCiroVal.clProSettings.FontSize = 18; 
+  LblCiroVal.clProSettings.FontHorzAlign = palTrailing;
   LblCiroVal.SetclProSettings(LblCiroVal.clProSettings);
   
   LblDoluStat = MainForm.AddNewProLabel(PnlStats, 'LblDoluStat', 'Dolu: 0');
-  LblDoluStat.Align = alLeft; LblDoluStat.Width = 80;
+  LblDoluStat.Align = alLeft; 
+  LblDoluStat.Width = 80;
   LblDoluStat.clProSettings.FontColor = clAlphaColor.clHexToColor(Color_Red);
-  LblDoluStat.clProSettings.FontSize = 14; LblDoluStat.clProSettings.TextSettings.Font.Style = [fsBold];
+  LblDoluStat.clProSettings.FontSize = 14;
   LblDoluStat.SetclProSettings(LblDoluStat.clProSettings);
   
   LblBosStat = MainForm.AddNewProLabel(PnlStats, 'LblBosStat', 'Boş: 20');
-  LblBosStat.Align = alLeft; LblBosStat.Width = 80;
+  LblBosStat.Align = alLeft; 
+  LblBosStat.Width = 80;
   LblBosStat.clProSettings.FontColor = clAlphaColor.clHexToColor(Color_Green);
-  LblBosStat.clProSettings.FontSize = 14; LblBosStat.clProSettings.TextSettings.Font.Style = [fsBold];
+  LblBosStat.clProSettings.FontSize = 14;
   LblBosStat.SetclProSettings(LblBosStat.clProSettings);
 
   PnlFooter = MainForm.AddNewProPanel(MainForm, 'PnlFooter');
-  PnlFooter.Align = alBottom; PnlFooter.Height = 60;
+  PnlFooter.Align = alBottom; 
+  PnlFooter.Height = 60;
   PnlFooter.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(Color_White);
-  PnlFooter.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0'); PnlFooter.clProSettings.BorderWidth = 1;
+  PnlFooter.clProSettings.IsFill = True;
+  PnlFooter.clProSettings.BorderColor = clAlphaColor.clHexToColor('#E2E8F0'); 
+  PnlFooter.clProSettings.BorderWidth = 1;
   PnlFooter.SetclProSettings(PnlFooter.clProSettings);
   
   BtnTabPark = MainForm.AddNewProButton(PnlFooter, 'BtnTabPark', 'OTOPARK');
-  BtnTabPark.Align = alLeft; BtnTabPark.Width = MainForm.clWidth / 2;
+  BtnTabPark.Align = alLeft; 
+  BtnTabPark.Width = MainForm.clWidth div 2;
   BtnTabPark.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(Color_White);
   BtnTabPark.clProSettings.FontColor = clAlphaColor.clHexToColor(Color_Blue);
-  BtnTabPark.clProSettings.FontSize = 14; BtnTabPark.clProSettings.TextSettings.Font.Style = [fsBold];
+  BtnTabPark.clProSettings.FontSize = 14;
+  BtnTabPark.clProSettings.IsFill = True;
   BtnTabPark.SetclProSettings(BtnTabPark.clProSettings);
   MainForm.AddNewEvent(BtnTabPark, tbeOnClick, 'SwitchToPark');
   
@@ -452,31 +598,34 @@ void SetupUI;
   BtnTabHistory.Align = alClient;
   BtnTabHistory.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(Color_White);
   BtnTabHistory.clProSettings.FontColor = clAlphaColor.clHexToColor('#94A3B8');
-  BtnTabHistory.clProSettings.FontSize = 14; BtnTabHistory.clProSettings.TextSettings.Font.Style = [fsBold];
+  BtnTabHistory.clProSettings.FontSize = 14;
+  BtnTabHistory.clProSettings.IsFill = True;
   BtnTabHistory.SetclProSettings(BtnTabHistory.clProSettings);
   MainForm.AddNewEvent(BtnTabHistory, tbeOnClick, 'SwitchToHistory');
 
   PnlContent = MainForm.AddNewProPanel(MainForm, 'PnlContent');
   PnlContent.Align = alClient;
   PnlContent.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(Color_Bg);
+  PnlContent.clProSettings.IsFill = True;
   PnlContent.SetclProSettings(PnlContent.clProSettings);
   
   PnlParkView = MainForm.AddNewProPanel(PnlContent, 'PnlParkView');
   PnlParkView.Align = alClient; 
-  PnlParkView.Margins.top = 5;
+  PnlParkView.Margins.Top = 5;
   PnlParkView.Margins.Left = 5;
   PnlParkView.Margins.Right = 5;
-  PnlParkView.Margins.bottom = 5;
+  PnlParkView.Margins.Bottom = 5;
   PnlParkView.clProSettings.IsTransparent = True;
   PnlParkView.SetclProSettings(PnlParkView.clProSettings);
   
   PnlHistoryView = MainForm.AddNewProPanel(PnlContent, 'PnlHistoryView');
   PnlHistoryView.Align = alClient; 
-  PnlHistoryView.Margins.top = 5;
+  PnlHistoryView.Margins.Top = 5;
   PnlHistoryView.Margins.Left = 5;
   PnlHistoryView.Margins.Right = 5;
-  PnlHistoryView.Margins.bottom = 5;
-  PnlHistoryView.clProSettings.IsTransparent = True; PnlHistoryView.Visible = False;
+  PnlHistoryView.Margins.Bottom = 5;
+  PnlHistoryView.clProSettings.IsTransparent = True; 
+  PnlHistoryView.Visible = False;
   PnlHistoryView.SetclProSettings(PnlHistoryView.clProSettings);
   
   SwitchToPark;
